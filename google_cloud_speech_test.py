@@ -68,7 +68,6 @@ class MicrophoneStream:
 
 if __name__ == "__main__":
     
-    
     # See http://g.co/cloud/speech/docs/languages
     # for a list of supported languages.
     language_code = "zh-TW" 
