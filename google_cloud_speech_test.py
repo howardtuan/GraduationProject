@@ -6,7 +6,7 @@ import sys
 from google.cloud import speech
 
 import pyaudio
-
+import collections
 from pygame import *
 
 # Audio recording parameters
@@ -94,6 +94,7 @@ if __name__ == "__main__":
     head_font = font.Font("assets/font/Kaiu.ttf", 24)
     display.update()
     text = ""
+    text_buffer = collections.deque(maxlen = 3)
     
     with MicrophoneStream(RATE, CHUNK) as stream:
         audio_generator = stream.generator()
@@ -132,11 +133,17 @@ if __name__ == "__main__":
             else:
                 text = transcript + overwrite_chars
                 print(text)
+                text_buffer.append(text)
+                text = ""
                 if re.search(r"\b(exit|quit)\b", transcript, re.I):
                     print("Exiting..")
                     break
                 num_chars_printed = 0
-                
+            
             text_surface = head_font.render(text, True, (0, 0, 0))
             user_interface.blit(text_surface, (10, 10))
+            
+            for idx, text in enumerate(text_buffer):
+                text_surface = head_font.render(text, True, (0, 0, 0))
+                user_interface.blit(text_surface, (10, 24 * (idx + 2)))
             display.update()
