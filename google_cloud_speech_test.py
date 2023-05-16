@@ -141,9 +141,9 @@ if __name__ == "__main__":
                 num_chars_printed = 0
             
             text_surface = head_font.render(text, True, (0, 0, 0))
-            user_interface.blit(text_surface, (10, 10))
+            user_interface.blit(text_surface, (10, 120))
             
             for idx, text in enumerate(text_buffer):
                 text_surface = head_font.render(text, True, (0, 0, 0))
-                user_interface.blit(text_surface, (10, 24 * (idx + 2)))
+                user_interface.blit(text_surface, (10, 24 * (1 + idx)))
             display.update()
