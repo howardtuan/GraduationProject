@@ -1,0 +1,11 @@
+certifi==2023.5.7
+cffi==1.15.1
+charset-normalizer==3.1.0
+idna==3.4
+inflection==0.5.1
+PyAudio==0.2.13
+pycparser==2.21
+raylib-dynamic==4.2.1.2
+requests==2.30.0
+SpeechRecognition==3.10.0
+urllib3==2.0.2
