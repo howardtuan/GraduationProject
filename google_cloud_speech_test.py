@@ -14,8 +14,8 @@ RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
 # UI 介面參數
-SCREENWIDTH = 800
-SCREENHEIGHT = 600 
+SCREENWIDTH = 1200
+SCREENHEIGHT = 800 
 
 class MicrophoneStream:
     """Opens a recording stream as a generator yielding the audio chunks."""
