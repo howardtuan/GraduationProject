@@ -7,12 +7,15 @@ from google.cloud import speech
 
 import pyaudio
 
-from tkinter_test import interface
+from pygame import *
 
 # Audio recording parameters
 RATE = 16000
 CHUNK = int(RATE / 10)  # 100ms
 
+# UI 介面參數
+SCREENWIDTH = 800
+SCREENHEIGHT = 600 
 
 class MicrophoneStream:
     """Opens a recording stream as a generator yielding the audio chunks."""
@@ -83,6 +86,14 @@ if __name__ == "__main__":
         config=config, interim_results=True
     )
 
+    # UI initialization
+    init()
+    user_interface = display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+    display.set_caption('測試')
+    user_interface.fill((255, 255, 255))
+    head_font = font.Font("assets/font/Kaiu.ttf", 24)
+    display.update()
+    text = ""
     
     with MicrophoneStream(RATE, CHUNK) as stream:
         audio_generator = stream.generator()
@@ -92,18 +103,28 @@ if __name__ == "__main__":
 
         # Now, put the transcription responses to use.
         num_chars_printed = 0
+        
         for response in responses:
+            for events in event.get():
+                if events.type == QUIT:
+                    quit()
+                    sys.exit()
+            
             if not response.results:
                 continue
 
             result = response.results[0]
             if not result.alternatives:
                 continue
-
+            
+            # reset UI
+            user_interface.fill((255, 255, 255))
+            
             transcript = result.alternatives[0].transcript
             overwrite_chars = " " * (num_chars_printed - len(transcript))
 
             if not result.is_final:
+                text = transcript + overwrite_chars
                 sys.stdout.write(transcript + overwrite_chars + "\r")
                 sys.stdout.flush()
                 num_chars_printed = len(transcript)
@@ -111,11 +132,11 @@ if __name__ == "__main__":
             else:
                 text = transcript + overwrite_chars
                 print(text)
-
-            
                 if re.search(r"\b(exit|quit)\b", transcript, re.I):
                     print("Exiting..")
                     break
-            
                 num_chars_printed = 0
                 
+            text_surface = head_font.render(text, True, (0, 0, 0))
+            user_interface.blit(text_surface, (10, 10))
+            display.update()
