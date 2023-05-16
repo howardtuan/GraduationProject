@@ -17,6 +17,7 @@ pyasn1==0.5.0
 pyasn1-modules==0.3.0
 PyAudio==0.2.13
 pycparser==2.21
+pygame==2.4.0
 raylib-dynamic==4.2.1.2
 requests==2.30.0
 rsa==4.9
