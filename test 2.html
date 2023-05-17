@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>    <title>話中有畫－測試模板</title>
+</head>
+<body>
+    <style>
+        .modal-dialog {
+        max-height: 70vh; /* 設置最大高度為 70% 螢幕高度 */
+        }
+
+        .modal-body {
+        height: 400px; /* 設置固定高度 */
+        overflow-y: scroll; /* 添加垂直滾動軸 */
+        }
+
+    </style>
+    <main>
+        <div class="container py-4">
+          <header class="pb-3 mb-4 border-bottom">
+            <a href="#" class="d-flex align-items-center text-dark text-decoration-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                    <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
+                    <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+                <span class="fs-4">話中有畫－測試模板</span>
+            </a>
+          </header>
+      
+          
+      
+          <div class="row align-items-md-stretch" >
+            <div class="col-md-8">
+                <div class="h-100 p-5 bg-success-subtle border rounded-3" style="min-height: 550px;">
+                    <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="h-100 p-5 bg-danger p-2 text-dark bg-opacity-10 border rounded-3" style="height: 550px; max-height: 550px; overflow-y: auto;">
+                    <h3 style="margin-top: -30px;margin-left: -30px;">文字區</h3>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                </div>
+            </div>
+        </div>
+        
+        <p></p>
+        
+        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px">開始/停止</button>
+        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px">暫停</button>
+        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px">清空文字區域</button>
+        <button type="button" class="btn btn-outline-dark btn-lg" style="margin-right:5px" data-bs-toggle="modal" data-bs-target="#scriptModal">逐字稿生成</button>
+        <button type="button" class="btn btn-outline-primary btn-lg " data-bs-toggle="modal" data-bs-target="#scriptModal2">對話大綱</button>
+        <!-- Modal 彈出視窗 -->
+        <div class="modal fade" id="scriptModal" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="scriptModalLabel">逐字稿</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                        <p style="margin: 0 0 5px;">User:你這個臭甲</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal 彈出視窗 -->
+        <div class="modal fade" id="scriptModal2" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="scriptModalLabel">對話大綱</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 0 0 5px;">•王乙己一到 DC（某地），大家都對他投降的人嘲笑，有人甚至喊他要被打。
+                        </p>
+                        <p style="margin: 0 0 5px;">•王乙己對此感到不解，問大家是否都瘋了。
+                        </p>
+                        <p style="margin: 0 0 5px;">•大家故意高聲嚷嚷，表示他們不知道大家都會投降。
+                        </p>
+                        <p style="margin: 0 0 5px;">•王乙己生氣地說大家是在玩什麼遊戲，這是積分嗎？
+                        </p>
+                        <p style="margin: 0 0 5px;">•有人解釋史博宇先投降，然後大家都跟著投降，只是開個玩笑而已。
+                        </p>
+                        <p style="margin: 0 0 5px;">•王乙己越來越生氣，開始發表激烈的言論，指責大家浪費他的時間。
+                        </p>
+                        <p style="margin: 0 0 5px;">•人們紛紛引起嘲笑，玩笑話不斷，氣氛歡快。
+                        </p>
+                        <p style="margin: 0 0 5px;">•DC 內外充滿了快活的氛圍。
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        <footer class="pt-3 mt-4 text-body-secondary border-top"> © 話中有畫</footer>
+        </div>
+      </main>
+</body>
+</html>

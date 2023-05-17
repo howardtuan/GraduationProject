@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>語音轉文字</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #result {
+            white-space: pre-wrap;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .image-container img {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>語音轉文字</h1>
+    <button id="transcribe-btn" onclick="toggleTranscription()">開始語音轉文字</button>
+    <button id="clear-btn" onclick="clearResult()">清空文字</button>
+    <div id="result"></div>
+    <div class="image-container" id="image-container"></div>
+    <script>
+        var isTranscribing = false;  // 記錄是否正在進行語音轉文字
+        var currentKeywords = [];  // 紀錄目前關鍵字
+
+        function toggleTranscription() {
+            isTranscribing = !isTranscribing;  // 切換狀態
+
+            if (isTranscribing) {
+                startTranscription();
+            } else {
+                stopTranscription();
+            }
+        }
+
+        function startTranscription() {
+            $('#transcribe-btn').text('結束語音轉文字');
+            transcribe();
+        }
+
+        function stopTranscription() {
+            $('#transcribe-btn').text('開始語音轉文字');
+            hideImages();
+        }
+
+        function transcribe() {
+            $.ajax({
+                url: '/transcribe',
+                type: 'GET',
+                success: function(response) {
+                    var text = response.text;
+                    var resultDiv = $('#result');
+                    resultDiv.append(text + '<br>');
+
+                    var keywords = extractKeywords(text);
+
+                    hideImages();
+
+                    if (keywords.length > 0) {
+                        showImages(keywords);
+                    }
+
+                    currentKeywords = keywords;
+
+                    if (isTranscribing) {
+                        transcribe();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    if (isTranscribing) {
+                        transcribe();
+                    }
+                }
+            });
+        }
+
+        function extractKeywords(text) {
+            var keywords = [];
+            var keywordMap = {
+                '青蛙': '/static/images/frog.jpeg',
+                // 其他關鍵字和對應的圖片路徑
+                // '關鍵字': '圖片路徑',
+            };
+
+            for (var keyword in keywordMap) {
+                if (text.includes(keyword)) {
+                    keywords.push(keyword);
+                }
+            }
+
+            return keywords;
+        }
+
+        function showImages(keywords) {
+            var imageContainer = $('#image-container');
+
+            keywords.forEach(function(keyword) {
+                var imagePath = getImagePath(keyword);
+                var imageElement = '<img src="' + imagePath + '" alt="' + keyword + '">';
+
+                imageContainer.append(imageElement);
+            });
+        }
+
+        function hideImages() {
+            var imageContainer = $('#image-container');
+            imageContainer.empty();
+        }
+
+        function getImagePath(keyword) {
+            var keywordMap = {
+                '青蛙': '/static/images/frog.jpeg',
+                // 其他關鍵字和對應的圖片路徑
+                // '關鍵字': '圖片路徑',
+            };
+
+            return keywordMap[keyword] || '';
+        }
+
+        function clearResult() {
+            var resultDiv = $('#result');
+            resultDiv.empty();
+        }
+    </script>
+</body>
+</html>
