@@ -3,25 +3,39 @@ import speech_recognition as sr
 
 app = Flask(__name__)
 static_folder='static'
-# 創建一個辨識器
+# 创建一个识别器
 r = sr.Recognizer()
+paused = False
 
 @app.route('/')
 def index():
-    return render_template('index_2.html')
+    return render_template('index.html')
+
+@app.route('/toggle_transcription')
+def toggle_transcription():
+    global paused
+    paused = not paused
+    if paused:
+        return jsonify({'status': 'paused'})
+    else:
+        return jsonify({'status': 'started'})
 
 @app.route('/transcribe')
 def transcribe():
-    # 使用電腦麥克風
+    global paused
+    if paused:
+        return jsonify({'status': 'paused'})
+
+    # 使用电脑麦克风
     with sr.Microphone() as source:
-        # 設置最小音量閾值
+        # 设置最小音量阈值
         r.adjust_for_ambient_noise(source, duration=1)
 
-        # 監聽語音
+        # 监听语音
         audio = r.listen(source)
 
         try:
-            # 辨識語音
+            # 辨识语音
             text = r.recognize_google(audio, language='zh-TW')
             return jsonify({'text': text})
         except sr.UnknownValueError:
