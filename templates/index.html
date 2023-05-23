@@ -99,7 +99,7 @@
                         <h5 class="modal-title" id="scriptModalLabel2">對話大綱</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
+                    <div class="modal-body">2222
                         <pre id="dialogue-summary-content"></pre>
                     </div>
 
@@ -117,6 +117,7 @@
             var transcript = '';  // 存儲逐字稿
             var dialogueSummary = ''; // 存儲對話摘要
             var startTime = null;  // 開始時間
+            var outline = '';   //存儲轉換摘要用文字稿
 
             function toggleTranscription() {
                 isTranscribing = !isTranscribing;  // 切換狀態
@@ -165,6 +166,7 @@
                         var currentTime = getFormattedTime();
                         resultDiv.append(currentTime + ' User: ' + text + '<br>');
                         transcript += currentTime + ' User: ' + text + '\n';
+                        outline += text+'\n';
 
                         var keywords = extractKeywords(text);
 
@@ -274,7 +276,7 @@
             }
 
             function generateDialogueSummary() {
-                var transcriptLines = transcript.split('\n'); // 將逐字稿以換行符拆分成行數
+                var transcriptLines = outline.split('\n'); // 將逐字稿以換行符拆分成行數
                 var summary = '';
 
                 for (var i = 0; i < transcriptLines.length; i++) {
@@ -289,15 +291,42 @@
                 // 在摘要前後移除多餘的空白
                 summary = summary.trim();
 
-                return summary;
+                $.ajax({
+                    url: '/outline',
+                    type: 'POST',
+                    data: JSON.stringify({ value: summary }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        console.log('Response from Python:', result);
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(error);
+                    }
+                });
+
+                //return summary;
             }
 
             function showDialogueSummary() {
-                dialogueSummary = generateDialogueSummary();
+                var sss='';
+                generateDialogueSummary()
+                $.ajax({
+                    url: '/transcribe',
+                    type: 'POST',
+                    data: JSON.stringify({ value: data }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        sss+=data+'\n';
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(error);
+                    }
+                });
+                //dialogueSummary = generateDialogueSummary();
 
                 // 將摘要顯示在彈出視窗中
                 var summaryContent = document.getElementById('dialogue-summary-content');
-                summaryContent.innerText = dialogueSummary;
+                summaryContent.innerText = sss;
             }
 
 
