@@ -52,22 +52,30 @@ def outlinetest():
     #接收逐字稿
     data = request.get_json()
     value = data['value']
+
     #處理
     matrix = np.array([[0, 1], [1, 0]])
     graph = nx.from_numpy_matrix(matrix)
-    #outlineS=[]
     outline=''  #儲存摘要
+    outline_dict={}
 
     tr4s = TextRank4Sentence()
     tr4s.analyze(text=value, lower=True, source = 'all_filters')
-    for item in tr4s.get_key_sentences(num=5):  #num是大綱行數 可調整
+    for item in tr4s.get_key_sentences(num=10):  #num是大綱行數 可調整
         outline += item.sentence + '\n'
         # index是語句在文本中位置，weight是權重
-        print('Sent Idx: {}, Weight: {:.4f}\n{}\n'.format(item.index, item.weight, item.sentence))  
+        outline_dict[item.index] = item.sentence
+        # print('Sent Idx: {}, Weight: {:.4f}\n{}\n'.format(item.index, item.weight, item.sentence))  
+    sorted_dict = dict(sorted(outline_dict.items(), key=lambda x: x[0]))
     #回傳
-    response_data = { 'data': outline }
+    
+    sorted_values = [value for _, value in sorted(outline_dict.items())]
+    result = '\n'.join(sorted_values)
+    print(result)
+    response_data = { 'data': result }
     return jsonify(response_data)
 
 
 if __name__ == '__main__':
     app.run()
+
