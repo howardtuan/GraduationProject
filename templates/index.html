@@ -99,12 +99,13 @@
                         <h5 class="modal-title" id="scriptModalLabel2">對話大綱</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">2222
+                    <div class="modal-body">
                         <pre id="dialogue-summary-content"></pre>
                     </div>
 
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                        <button type="button" class="btn btn-primary" onclick="downloadoutline()">下載對話大綱</button>
                     </div>
                 </div>
             </div>
@@ -306,28 +307,40 @@
 
                 //return summary;
             }
-
+            var sss = '';
             function showDialogueSummary() {
-                var sss='';
-                generateDialogueSummary()
+                generateDialogueSummary();
                 $.ajax({
-                    url: '/transcribe',
+                    url: '/outline',
                     type: 'POST',
-                    data: JSON.stringify({ value: data }),
+                    data: JSON.stringify({ value: outline }),  // 修改這裡的參數為 outline
                     contentType: 'application/json',
                     success: function(response) {
-                        sss+=data+'\n';
+                        sss += response.data + '\n';  // 將回傳的摘要資料串接到 `sss` 變數中
+                        var summaryContent = document.getElementById('dialogue-summary-content');
+                        summaryContent.innerText = sss;  // 將摘要資料顯示在彈出視窗中
                     },
                     error: function(xhr, status, error) {
                         console.log(error);
                     }
                 });
-                //dialogueSummary = generateDialogueSummary();
-
-                // 將摘要顯示在彈出視窗中
-                var summaryContent = document.getElementById('dialogue-summary-content');
-                summaryContent.innerText = sss;
             }
+
+            function downloadoutline() {
+                var outlineText = sss;  // 這裡的 `transcript` 是逐字稿的文字內容
+
+                // 建立 Blob 物件
+                var blob = new Blob([outlineText], { type: 'text/plain' });
+
+                // 建立下載連結
+                var downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = 'Outline.txt';
+
+                // 觸發點擊事件下載檔案
+                downloadLink.click();
+            }
+
 
 
 
