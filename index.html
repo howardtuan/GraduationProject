@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <title>話中有畫－測試模板</title>
+</head>
+<body>
+    <style>
+        .modal-dialog {
+        max-height: 70vh; /* 設置最大高度為 70% 螢幕高度 */
+        }
+
+        .modal-body {
+        height: 400px; /* 設置固定高度 */
+        overflow-y: scroll; /* 添加垂直滾動軸 */
+        }
+
+        #result {
+            white-space: pre-wrap;
+        }
+        .image-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .image-container img {
+            margin-right: 10px;
+        }
+
+    </style>
+    <main>
+        <div class="container py-4">
+          <header class="pb-3 mb-4 border-bottom">
+            <a href="#" class="d-flex align-items-center text-dark text-decoration-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                    <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
+                    <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                </svg>
+                <span class="fs-4">話中有畫－測試模板</span>
+            </a>
+          </header>
+
+
+
+          <div class="row align-items-md-stretch" >
+            <div class="col-md-8">
+                <div class="h-100 p-5 bg-success-subtle border rounded-3" style="min-height: 550px;">
+                    <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3>
+
+                    <div class="image-container" id="image-container"></div>
+
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="h-100 p-5 bg-danger p-2 text-dark bg-opacity-10 border rounded-3" style="height: 550px; max-height: 550px; overflow-y: auto;">
+                    <h3 style="margin-top: -30px;margin-left: -30px;">文字區</h3>
+                    <div id="result"></div>
+                </div>
+            </div>
+        </div>
+
+        <p></p>
+
+        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px"id="transcribe-btn" onclick="toggleTranscription()">開始</button>
+        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px" id="pause-btn" onclick="togglePause()">暫停</button>
+        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px"id="clear-btn" onclick="clearResult()">清空文字區域</button>
+
+        <button type="button" class="btn btn-outline-dark btn-lg" style="margin-right:5px" data-bs-toggle="modal" data-bs-target="#scriptModal" onclick="showTranscript()">逐字稿生成</button>
+        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#scriptModal2" onclick="showDialogueSummary()">對話大綱</button>
+        <!-- Modal 彈出視窗 -->
+        <div class="modal fade" id="scriptModal" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="scriptModalLabel1">逐字稿</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <pre id="transcript-content"></pre>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                        <button type="button" class="btn btn-primary" onclick="downloadTranscript()">下載逐字稿</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- Modal 彈出視窗 -->
+        <div class="modal fade" id="scriptModal2" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="scriptModalLabel2">對話大綱</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">2222
+                        <pre id="dialogue-summary-content"></pre>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            var isTranscribing = false;  // 記錄是否正在進行語音轉文字
+            var isPaused = false;  // 記錄是否暫停
+            var currentKeywords = [];  // 紀錄目前關鍵字
+            var transcript = '';  // 存儲逐字稿
+            var dialogueSummary = ''; // 存儲對話摘要
+            var startTime = null;  // 開始時間
+            var outline = '';   //存儲轉換摘要用文字稿
+
+            function toggleTranscription() {
+                isTranscribing = !isTranscribing;  // 切換狀態
+
+                if (isTranscribing) {
+                    startTranscription();
+                } else {
+                    stopTranscription();
+                }
+            }
+
+            function togglePause() {
+                isPaused = !isPaused;  // 切換狀態
+
+                if (isPaused) {
+                    $('#pause-btn').text('繼續');
+                } else {
+                    $('#pause-btn').text('暫停');
+                }
+            }
+
+            function startTranscription() {
+                $('#transcribe-btn').text('結束');
+                startTime = new Date();
+                transcribe();
+            }
+
+            function stopTranscription() {
+                $('#transcribe-btn').text('開始');
+                startTime = null;
+                hideImages();
+            }
+
+            function transcribe() {
+                if (isPaused) {
+                    setTimeout(transcribe, 1000);  // 暫停時延遲1秒後繼續執行
+                    return;
+                }
+
+                $.ajax({
+                    url: '/transcribe',
+                    type: 'GET',
+                    success: function(response) {
+                        var text = response.text;
+                        var resultDiv = $('#result');
+                        var currentTime = getFormattedTime();
+                        resultDiv.append(currentTime + ' User: ' + text + '<br>');
+                        transcript += currentTime + ' User: ' + text + '\n';
+                        outline += text+'\n';
+
+                        var keywords = extractKeywords(text);
+
+                        hideImages();
+
+                        if (keywords.length > 0) {
+                            showImages(keywords);
+                        }
+
+                        currentKeywords = keywords;
+
+                        if (isTranscribing) {
+                            transcribe();
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        if (isTranscribing) {
+                            transcribe();
+                        }
+                    }
+                });
+            }
+
+            function extractKeywords(text) {
+                var keywords = [];
+                var keywordMap = {
+                    '青蛙': '/static/images/frog.jpeg',
+                    // 其他關鍵字和對應的圖片路徑
+                    // '關鍵字': '圖片路徑',
+                };
+
+                for (var keyword in keywordMap) {
+                    if (text.includes(keyword)) {
+                        keywords.push(keyword);
+                    }
+                }
+
+                return keywords;
+            }
+
+            function showImages(keywords) {
+                var imageContainer = $('#image-container');
+
+                keywords.forEach(function(keyword) {
+                    var imagePath = getImagePath(keyword);
+                    var imageElement = '<img src="' + imagePath + '" alt="' + keyword + '">';
+
+                    imageContainer.append(imageElement);
+                });
+            }
+
+            function hideImages() {
+                var imageContainer = $('#image-container');
+                imageContainer.empty();
+            }
+
+            function getImagePath(keyword) {
+                var keywordMap = {
+                    '青蛙': '/static/images/frog.jpeg',
+                    // 其他關鍵字和對應的圖片路徑
+                    // '關鍵字': '圖片路徑',
+                };
+
+                return keywordMap[keyword] || '';
+            }
+
+            function clearResult() {
+                var resultDiv = $('#result');
+                resultDiv.empty();
+            }
+
+            function showTranscript() {
+                $('#transcript-content').text(transcript);
+            }
+
+            function getFormattedTime() {
+                if (startTime) {
+                    var currentTime = new Date();
+                    var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+                    var hours = Math.floor(elapsedSeconds / 3600);
+                    var minutes = Math.floor((elapsedSeconds % 3600) / 60);
+                    var seconds = elapsedSeconds % 60;
+
+                    var formattedTime = hours.toString().padStart(2, '0') + ':' +
+                                        minutes.toString().padStart(2, '0') + ':' +
+                                        seconds.toString().padStart(2, '0');
+
+                    return formattedTime;
+                }
+
+                return '';
+            }
+
+            function downloadTranscript() {
+                var transcriptText = transcript;  // 這裡的 `transcript` 是逐字稿的文字內容
+
+                // 建立 Blob 物件
+                var blob = new Blob([transcriptText], { type: 'text/plain' });
+
+                // 建立下載連結
+                var downloadLink = document.createElement('a');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = 'transcript.txt';
+
+                // 觸發點擊事件下載檔案
+                downloadLink.click();
+            }
+
+            function generateDialogueSummary() {
+                var transcriptLines = outline.split('\n'); // 將逐字稿以換行符拆分成行數
+                var summary = '';
+
+                for (var i = 0; i < transcriptLines.length; i++) {
+                    var line = transcriptLines[i];
+
+                    // 忽略使用者和時間的行數
+                    if (!line.includes('User:') && !line.includes('AI:') && !line.includes('[')) {
+                        summary += line + '\n';
+                    }
+                }
+
+                // 在摘要前後移除多餘的空白
+                summary = summary.trim();
+
+                $.ajax({
+                    url: '/outline',
+                    type: 'POST',
+                    data: JSON.stringify({ value: summary }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        console.log('Response from Python:', result);
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(error);
+                    }
+                });
+
+                //return summary;
+            }
+
+            function showDialogueSummary() {
+                var sss='';
+                generateDialogueSummary()
+                $.ajax({
+                    url: '/transcribe',
+                    type: 'POST',
+                    data: JSON.stringify({ value: data }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        sss+=data+'\n';
+                    },
+                    error: function(xhr, status, error) {
+                        console.log(error);
+                    }
+                });
+                //dialogueSummary = generateDialogueSummary();
+
+                // 將摘要顯示在彈出視窗中
+                var summaryContent = document.getElementById('dialogue-summary-content');
+                summaryContent.innerText = sss;
+            }
+
+
+
+
+        </script>
+        <footer class="pt-3 mt-4 text-body-secondary border-top"> © 話中有畫</footer>
+        </div>
+      </main>
+</body>
+</html>

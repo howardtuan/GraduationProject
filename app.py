@@ -1,5 +1,9 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify,request
 import speech_recognition as sr
+import codecs
+from textrank4zh import TextRank4Keyword, TextRank4Sentence
+import networkx as nx
+import numpy as np
 
 app = Flask(__name__)
 static_folder='static'
@@ -42,6 +46,28 @@ def transcribe():
             return jsonify({'error': 'Speech recognition could not understand audio.'}), 400
         except sr.RequestError:
             return jsonify({'error': 'Speech recognition service unavailable.'}), 500
+
+@app.route('/outline', methods=['POST'])
+def outlinetest():    
+    #接收逐字稿
+    data = request.get_json()
+    value = data['value']
+    #處理
+    matrix = np.array([[0, 1], [1, 0]])
+    graph = nx.from_numpy_matrix(matrix)
+    #outlineS=[]
+    outline=''  #儲存摘要
+
+    tr4s = TextRank4Sentence()
+    tr4s.analyze(text=value, lower=True, source = 'all_filters')
+    for item in tr4s.get_key_sentences(num=5):  #num是大綱行數 可調整
+        outline += item.sentence + '\n'
+        # index是語句在文本中位置，weight是權重
+        print('Sent Idx: {}, Weight: {:.4f}\n{}\n'.format(item.index, item.weight, item.sentence))  
+    #回傳
+    response_data = { 'data': outline }
+    return jsonify(response_data)
+
 
 if __name__ == '__main__':
     app.run()
