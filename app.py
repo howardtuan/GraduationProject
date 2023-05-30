@@ -53,9 +53,13 @@ def outlinetest():
     data = request.get_json()
     value = data['value']
 
+    G = nx.Graph()
+
     #處理
     matrix = np.array([[0, 1], [1, 0]])
-    graph = nx.from_numpy_matrix(matrix)
+    G.add_edges_from(np.argwhere(matrix))
+
+    # graph = nx.from_numpy_matrix(matrix)
     outline=''  #儲存摘要
     outline_dict={}
 

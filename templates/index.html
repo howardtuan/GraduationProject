@@ -47,31 +47,28 @@
 
 
 
-          <div class="row align-items-md-stretch" >
+          <div class="row align-items-md-stretch">
             <div class="col-md-8">
-                <div class="h-100 p-5 bg-success-subtle border rounded-3" style="min-height: 550px;">
-                    <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3>
-
+                <div class="h-100 p-5 rounded-3 position-relative" style="min-height: 550px;">
+                    <!-- <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3> -->
                     <div class="image-container" id="image-container"></div>
-
                 </div>
             </div>
+            
             <div class="col-md-4">
-                <div class="h-100 p-5 bg-danger p-2 text-dark bg-opacity-10 border rounded-3" style="height: 550px; max-height: 550px; overflow-y: auto;">
-                    <h3 style="margin-top: -30px;margin-left: -30px;">文字區</h3>
+                <div class="h-100 p-5 p-2 text-dark bg-opacity-10 rounded-3" style="height: 550px; max-height: 550px; overflow-y: auto;">
+                    <!-- <h3 style="margin-top: -30px;margin-left: -30px;">文字區</h3> -->
                     <div id="result"></div>
                 </div>
             </div>
         </div>
+        
+        
+        
 
         <p></p>
 
-        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px"id="transcribe-btn" onclick="toggleTranscription()">開始</button>
-        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px" id="pause-btn" onclick="togglePause()">暫停</button>
-        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px"id="clear-btn" onclick="clearResult()">清空文字區域</button>
-
-        <button type="button" class="btn btn-outline-dark btn-lg" style="margin-right:5px" data-bs-toggle="modal" data-bs-target="#scriptModal" onclick="showTranscript()">逐字稿生成</button>
-        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#scriptModal2" onclick="showDialogueSummary()">對話大綱</button>
+        
         <!-- Modal 彈出視窗 -->
         <div class="modal fade" id="scriptModal" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -195,6 +192,12 @@
                 var keywords = [];
                 var keywordMap = {
                     '青蛙': '/static/images/frog.jpeg',
+                    '鹹水雞': '/static/images/gg.png',
+                    '霸王': '/static/images/gg2.png',
+                    '十字路口': '/static/images/p1.jpeg',
+                    '日新路': '/static/images/p2.jpeg',
+                    '屈臣氏': '/static/images/p3.jpeg',
+                    '對面': '/static/images/p4.jpeg',
                     // 其他關鍵字和對應的圖片路徑
                     // '關鍵字': '圖片路徑',
                 };
@@ -227,6 +230,12 @@
             function getImagePath(keyword) {
                 var keywordMap = {
                     '青蛙': '/static/images/frog.jpeg',
+                    '鹹水雞': '/static/images/gg.png',
+                    '霸王': '/static/images/gg2.png',
+                    '十字路口': '/static/images/p1.jpeg',
+                    '日新路': '/static/images/p2.jpeg',
+                    '屈臣氏': '/static/images/p3.jpeg',
+                    '對面': '/static/images/p4.jpeg',
                     // 其他關鍵字和對應的圖片路徑
                     // '關鍵字': '圖片路徑',
                 };
@@ -346,7 +355,14 @@
 
 
         </script>
-        <footer class="pt-3 mt-4 text-body-secondary border-top"> © 話中有畫</footer>
+        <!--© 話中有畫-->
+        <footer class="pt-3 mt-4 text-body-secondary border-top"> </footer>
+        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px"id="transcribe-btn" onclick="toggleTranscription()">開始</button>
+        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px" id="pause-btn" onclick="togglePause()">暫停</button>
+        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px"id="clear-btn" onclick="clearResult()">清空文字區域</button>
+
+        <button type="button" class="btn btn-outline-dark btn-lg" style="margin-right:5px" data-bs-toggle="modal" data-bs-target="#scriptModal" onclick="showTranscript()">逐字稿生成</button>
+        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#scriptModal2" onclick="showDialogueSummary()">對話大綱</button>
         </div>
       </main>
 </body>
