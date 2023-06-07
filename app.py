@@ -1,8 +1,14 @@
 import os
 import openai
 from flask import Flask, render_template, jsonify,request
+import json
+
+with open('secret.json', 'r') as file:
+    data = json.load(file)
+OPENAI_API_KEY = data.get("OPENAI_API_KEY")
 app = Flask(__name__)
 static_folder='static'
+
 
 @app.route('/')
 def index():
@@ -10,24 +16,19 @@ def index():
 
 @app.route("/get_dialogue_summary", methods=["POST"])
 def get_dialogue_summary():
-    key = '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'
-    openai.api_key = key
-
-    # 从 POST 请求的 JSON 数据中获取参数值
+    openai.api_key = OPENAI_API_KEY
     input_param = request.get_json().get('inputParam')
     print('接收的逐字稿',input_param)
-    startQ = "請將以下逐字稿修改為大綱以及重點整理，格式為「主題：」「大綱：」「重點整理：」請條列式自動換行:"
-    # 在 prompt 中使用获取到的参数值
-    prompt = f"{startQ} {input_param}"
-    # prompt=input_param
-    response = openai.Completion.create(
-        engine='text-davinci-003',
-        prompt=prompt,
-        max_tokens=2000,
-        temperature=0.5
+    completion = openai.ChatCompletion.create(
+      model="gpt-3.5-turbo",
+      messages=[
+            {"role": "system", "content": "你是一位負責將逐字稿轉換為重點整理的工作人員，請將以下逐字稿修改為大綱以及重點整理，格式為「主題：」「大綱：」「重點整理：」請條列式自動換行:"},
+            {"role": "user", "content": input_param}
+        ]
     )
+    print(completion.choices[0].message.content)
 
-    completed_text = response['choices'][0]['text']
+    completed_text = completion.choices[0].message.content
     print(completed_text)
     return jsonify(response=completed_text)
 
