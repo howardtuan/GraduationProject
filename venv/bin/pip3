@@ -1,4 +1,6 @@
-#!/Users/apple/Desktop/GraduationProject/venv/bin/python3
+#!/bin/sh
+'''exec' "/Users/richard/Desktop/Project/[2023] Graduation_Project/venv/bin/python3" "$0" "$@"
+' '''
 # -*- coding: utf-8 -*-
 import re
 import sys

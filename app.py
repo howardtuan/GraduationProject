@@ -1,84 +1,38 @@
+import os
+import openai
 from flask import Flask, render_template, jsonify,request
-import speech_recognition as sr
-import codecs
-from textrank4zh import TextRank4Keyword, TextRank4Sentence
-import networkx as nx
-import numpy as np
-
 app = Flask(__name__)
 static_folder='static'
-# 创建一个识别器
-r = sr.Recognizer()
-paused = False
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/toggle_transcription')
-def toggle_transcription():
-    global paused
-    paused = not paused
-    if paused:
-        return jsonify({'status': 'paused'})
-    else:
-        return jsonify({'status': 'started'})
+@app.route("/get_dialogue_summary", methods=["POST"])
+def get_dialogue_summary():
+    key = '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'
+    openai.api_key = key
 
-@app.route('/transcribe')
-def transcribe():
-    global paused
-    if paused:
-        return jsonify({'status': 'paused'})
+    # 从 POST 请求的 JSON 数据中获取参数值
+    input_param = request.get_json().get('inputParam')
+    print('接收的逐字稿',input_param)
+    startQ = "請將以下逐字稿修改為大綱以及重點整理，格式為「主題：」「大綱：」「重點整理：」請條列式自動換行:"
+    # 在 prompt 中使用获取到的参数值
+    prompt = f"{startQ} {input_param}"
+    # prompt=input_param
+    response = openai.Completion.create(
+        engine='text-davinci-003',
+        prompt=prompt,
+        max_tokens=2000,
+        temperature=0.5
+    )
 
-    # 使用电脑麦克风
-    with sr.Microphone() as source:
-        # 设置最小音量阈值
-        r.adjust_for_ambient_noise(source, duration=1)
+    completed_text = response['choices'][0]['text']
+    print(completed_text)
+    return jsonify(response=completed_text)
 
-        # 监听语音
-        audio = r.listen(source)
 
-        try:
-            # 辨识语音
-            text = r.recognize_google(audio, language='zh-TW')
-            return jsonify({'text': text})
-        except sr.UnknownValueError:
-            return jsonify({'error': 'Speech recognition could not understand audio.'}), 400
-        except sr.RequestError:
-            return jsonify({'error': 'Speech recognition service unavailable.'}), 500
-
-@app.route('/outline', methods=['POST'])
-def outlinetest():    
-    #接收逐字稿
-    data = request.get_json()
-    value = data['value']
-
-    G = nx.Graph()
-
-    #處理
-    matrix = np.array([[0, 1], [1, 0]])
-    G.add_edges_from(np.argwhere(matrix))
-
-    # graph = nx.from_numpy_matrix(matrix)
-    outline=''  #儲存摘要
-    outline_dict={}
-
-    tr4s = TextRank4Sentence()
-    tr4s.analyze(text=value, lower=True, source = 'all_filters')
-    for item in tr4s.get_key_sentences(num=10):  #num是大綱行數 可調整
-        outline += item.sentence + '\n'
-        # index是語句在文本中位置，weight是權重
-        outline_dict[item.index] = item.sentence
-        # print('Sent Idx: {}, Weight: {:.4f}\n{}\n'.format(item.index, item.weight, item.sentence))  
-    sorted_dict = dict(sorted(outline_dict.items(), key=lambda x: x[0]))
-    #回傳
     
-    sorted_values = [value for _, value in sorted(outline_dict.items())]
-    result = '\n'.join(sorted_values)
-    print(result)
-    response_data = { 'data': result }
-    return jsonify(response_data)
-
 
 if __name__ == '__main__':
     app.run()
