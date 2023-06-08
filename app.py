@@ -21,6 +21,7 @@ def get_dialogue_summary():
     print('接收的逐字稿',input_param)
     completion = openai.ChatCompletion.create(
       model="gpt-3.5-turbo",
+      temperature=0,   
       messages=[
             {"role": "system", "content": "你是一位負責將逐字稿轉換為重點整理的工作人員，請將以下逐字稿修改為大綱以及重點整理，格式為「主題：」「大綱：」「重點整理：」請條列式自動換行:"},
             {"role": "user", "content": input_param}
