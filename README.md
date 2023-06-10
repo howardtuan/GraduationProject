@@ -17,4 +17,7 @@ run app.py
 conda deactivate
 進入虛擬環境指令：
 source venv/bin/activate
+----2023/06/10
+已將demo內容整合進Main分支，之後測試的檔案都丟入code_test裡面！
+記得要把secret.json放入與app.py同層的資料夾中
 </pre>
