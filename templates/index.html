@@ -179,8 +179,8 @@
                     const endTime = result.endTime;
                     const duration = startTime - previousEndTime;
                     
-                    if (duration > 0.7) {
-                        // 当间隔时间超过 0.7 秒时，将结果作为新的一句话
+                    if (duration > 0.2) {
+                        // 当间隔时间超过 0.2 秒时，将结果作为新的一句话
                         transcription += '\n';
                     }
 
