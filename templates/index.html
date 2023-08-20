@@ -14,6 +14,7 @@
 
     <title>話中有畫－測試模板</title>
 </head>
+
 <body>
     <style>
         .modal-dialog {
@@ -46,7 +47,7 @@
                     <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
                     <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
                 </svg>
-                <span class="fs-4">話中有畫－測試模板</span>
+                <span class="fs-4">話中有畫<span id="analysis-result"></span></span>
             </a>
           </header>
 
@@ -57,6 +58,14 @@
                 <div class="h-100 p-5 rounded-3 position-relative" style="min-height: 550px;">
                     <!-- <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3> -->
                     <div class="image-container" id="image-container"></div>
+                    
+                    <h2>大標題</h2>
+                    <h4>小標題</h4>
+                    <h4>小標題</h4>
+                    <h4>小標題</h4>
+                    <p>內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文</p>
+
+
                 </div>
             </div>
 
@@ -121,6 +130,69 @@
             </div>
         </div>
 
+        <script>
+            
+            function sendTranscriptionForAnalysis(transcription) {
+            if(status=="簡報模式"){
+                 // 创建 XMLHttpRequest 对象
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/get_ppt", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+
+                // 定义请求完成时的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // 解析并获取分析结果
+                        var response = JSON.parse(xhr.responseText).response;
+
+                        // 将分析结果更新到前端页面
+                        var responseElement = document.getElementById('analysis-result');
+                        responseElement.textContent = '－'+response;
+
+                    }
+                };
+
+                // 发送请求
+                xhr.send(JSON.stringify({ inputParam: transcription }));
+                var responseElement = document.getElementById('analysis-result');
+                responseElement.textContent = '－'+response;
+                if (response!='None'){
+                    status="簡報模式";
+                }else{
+                    status="None";
+                }
+                
+            }else{
+                // 创建 XMLHttpRequest 对象
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/get_sentence_analyze", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+
+                // 定义请求完成时的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // 解析并获取分析结果
+                        var response = JSON.parse(xhr.responseText).response;
+
+                        // 将分析结果更新到前端页面
+                        var responseElement = document.getElementById('analysis-result');
+                        responseElement.textContent = '－'+response;
+
+                    }
+                };
+
+                // 发送请求
+                xhr.send(JSON.stringify({ inputParam: transcription }));
+                var responseElement = document.getElementById('analysis-result');
+                responseElement.textContent = '－'+response;
+                status=response;
+            }
+            return status;
+            
+
+        }
+
+        </script>
         
         <!--語音轉文字-->
         <script>
@@ -194,6 +266,10 @@
                     hideImages();
                     showImages(keywords);
                     transcript_download = transcription; // 此变量要给下载的函数使用
+                    // 调用函数发送转录内容给后端进行分析
+                    var status=""
+                    status=sendTranscriptionForAnalysis(transcript);
+                    
                 } else {
                     transcriptionDiv.innerText = transcription + 'User：' + transcript;
                 }
