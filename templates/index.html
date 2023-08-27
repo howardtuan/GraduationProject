@@ -59,13 +59,13 @@
                     <!-- <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3> -->
                     <div class="image-container" id="image-container"></div>
                     
-                    <h2>大標題</h2>
-                    <h4>小標題</h4>
-                    <h4>小標題</h4>
-                    <h4>小標題</h4>
-                    <p id="test-result"></p>
-                    <p>內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文</p>
+                    <h1 id="Title"></h1>
+                    <div id="LittleTitle"></div>
+                    <div id="Content"></div>
+                    <div id="PIC"></div>
 
+                    <p id="test-result"></p>
+                  
 
                 </div>
             </div>
@@ -146,14 +146,53 @@
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         // 解析并获取分析结果
                         var response2 = JSON.parse(xhr.responseText).response;
+                        if(response2.includes("None")){
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 將單引號替換為雙引號，以符合 JSON 格式
+                        jsonStr = response2.replace(/'/g, '"');
+
+                        // 解析 JSON 字串為 JavaScript 物件
+                        var jsonObject = JSON.parse(jsonStr);
 
                         // 将分析结果更新到前端页面
                         var responseElement2 = document.getElementById('test-result');
                         responseElement2.textContent = '－'+response2;
                         if(response2.includes("None")){
-                        var responseElement = document.getElementById('analysis-result');
-                        responseElement.textContent = '－'+"None";
-                }
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 初始化
+                        var titleElement = document.getElementById('Title');
+                        var littleTitleContainer = document.getElementById('LittleTitle');
+                        var contentContainer = document.getElementById('Content');
+                        var picContainer = document.getElementById('PIC');
+                        titleElement.innerText = '';
+                        littleTitleContainer.innerHTML = ''; // 清空子元素
+                        contentContainer.innerHTML = ''; // 清空子元素
+                        picContainer.innerHTML = ''; // 清空子元素
+                        
+                        // 將資料放入對應的 HTML 元素
+                        document.getElementById('Title').innerText = jsonObject.Title;
+
+                        for (var i = 0; i < jsonObject.LittleTitle.length; i++) {
+                        var littleTitleElement = document.createElement('div');
+                        littleTitleElement.innerText = jsonObject.LittleTitle[i];
+                        document.getElementById('LittleTitle').appendChild(littleTitleElement);
+                        }
+
+                        for (var i = 0; i < jsonObject.Content.length; i++) {
+                        var contentElement = document.createElement('div');
+                        contentElement.innerText = jsonObject.Content[i];
+                        document.getElementById('Content').appendChild(contentElement);
+                        }
+
+                        for (var i = 0; i < jsonObject.PIC.length; i++) {
+                        var picElement = document.createElement('img');
+                        picElement.src = jsonObject.PIC[i];
+                        document.getElementById('PIC').appendChild(picElement);
+                        }
 
                     }
                 };
@@ -166,6 +205,8 @@
                     var responseElement = document.getElementById('analysis-result');
                     responseElement.textContent = '－'+"None";
                 }
+                
+                
             }else{
                 // 创建 XMLHttpRequest 对象
                 var xhr = new XMLHttpRequest();
