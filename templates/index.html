@@ -63,6 +63,7 @@
                     <h4>小標題</h4>
                     <h4>小標題</h4>
                     <h4>小標題</h4>
+                    <p id="test-result"></p>
                     <p>內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文內文</p>
 
 
@@ -132,9 +133,10 @@
 
         <script>
             
-            function sendTranscriptionForAnalysis(transcription) {
-            if(status=="簡報模式"){
-                 // 创建 XMLHttpRequest 对象
+            function sendTranscriptionForAnalysis(transcription,status) {
+                
+            if(document.getElementById('analysis-result').textContent.includes("簡報模式")){
+                // 创建 XMLHttpRequest 对象
                 var xhr = new XMLHttpRequest();
                 xhr.open("POST", "/get_ppt", true);
                 xhr.setRequestHeader("Content-Type", "application/json");
@@ -143,25 +145,27 @@
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         // 解析并获取分析结果
-                        var response = JSON.parse(xhr.responseText).response;
+                        var response2 = JSON.parse(xhr.responseText).response;
 
                         // 将分析结果更新到前端页面
+                        var responseElement2 = document.getElementById('test-result');
+                        responseElement2.textContent = '－'+response2;
+                        if(response2.includes("None")){
                         var responseElement = document.getElementById('analysis-result');
-                        responseElement.textContent = '－'+response;
+                        responseElement.textContent = '－'+"None";
+                }
 
                     }
                 };
 
                 // 发送请求
                 xhr.send(JSON.stringify({ inputParam: transcription }));
-                var responseElement = document.getElementById('analysis-result');
-                responseElement.textContent = '－'+response;
-                if (response!='None'){
-                    status="簡報模式";
-                }else{
-                    status="None";
+                var responseElement2 = document.getElementById('test-result');
+                responseElement2.textContent = '－'+response2;
+                if(response2.includes("None")){
+                    var responseElement = document.getElementById('analysis-result');
+                    responseElement.textContent = '－'+"None";
                 }
-                
             }else{
                 // 创建 XMLHttpRequest 对象
                 var xhr = new XMLHttpRequest();
@@ -185,9 +189,9 @@
                 xhr.send(JSON.stringify({ inputParam: transcription }));
                 var responseElement = document.getElementById('analysis-result');
                 responseElement.textContent = '－'+response;
-                status=response;
             }
-            return status;
+            
+            
             
 
         }
@@ -267,8 +271,8 @@
                     showImages(keywords);
                     transcript_download = transcription; // 此变量要给下载的函数使用
                     // 调用函数发送转录内容给后端进行分析
-                    var status=""
-                    status=sendTranscriptionForAnalysis(transcript);
+                    var responseElement = document.getElementById('analysis-result');
+                    sendTranscriptionForAnalysis(transcript,responseElement);
                     
                 } else {
                     transcriptionDiv.innerText = transcription + 'User：' + transcript;

@@ -37,7 +37,7 @@ def get_dialogue_summary():
 def get_sentence_analyze():
     openai.api_key = OPENAI_API_KEY
     input_param = request.get_json().get('inputParam')
-    print('接收的逐字稿',input_param)
+    print('接收的逐字稿 main',input_param)
     completion = openai.ChatCompletion.create(
       model="gpt-3.5-turbo-16k",
       messages=[
@@ -71,7 +71,7 @@ initMessage="""
     Content是重點整理使用者輸入的內容，並將其精簡化，不可使文字跟輸入的文字一模一樣!
     PIC通常會跟LittleTitle一樣，是輔助它的圖片！
     當還沒進到下一頁時，若先前已經介紹過某個LittleTitle並加入至LittleTitle、Content、PIC的話，不可以移除已經加入的內容！但如果兩句話都在講同一個小主題的話，可以更新並重整該主題的Content，使句字更順暢！接收到「下一頁」時，就回傳清空value的字典！
-
+    若使用者輸入「離開簡報模式」，則回傳"None"字串即可。
     """
 messages_db = [
     {"role": "system", "content": initMessage},
@@ -109,6 +109,9 @@ messages_db = [
     {"role": "assistant", "content": "{'Title':'美食推薦','LittleTitle':['海龜燒','來這吃冰吧','小蝌蚪起司餅'],'Content':['海龜燒是海龜造型的雞蛋糕，外皮酥脆，充滿雞蛋和奶香，外觀可愛，味道甜美。「來這吃冰吧」是網美們喜愛的韓系風格雪花冰店，店內以白色簡約裝潢為主，帶有小清新的氛圍。'],'PIC':['海龜燒','來這吃冰吧','小蝌蚪起司餅']}"},
     {"role": "user", "content": "最後則是連在地人都激推的美食，小蝌蚪起司餅！酥脆的餅皮搭配香濃罪惡的起司和店家特調的醬料及海苔粉，鹹甜的口味越嚼越香，而且每一口都能吃到飛魚卵在嘴巴逼逼波波的滋味，超級幸福～"},
     {"role": "assistant", "content": "{'Title':'美食推薦','LittleTitle':['海龜燒','來這吃冰吧','小蝌蚪起司餅'],'Content':['海龜燒是海龜造型的雞蛋糕，外皮酥脆，充滿雞蛋和奶香，外觀可愛，味道甜美。「來這吃冰吧」是網美們喜愛的韓系風格雪花冰店，店內以白色簡約裝潢為主，帶有小清新的氛圍。最後，我們來介紹當地人大力推薦的美食，小蝌蚪起司餅！餅皮酥脆，搭配濃郁的起司、店家特調的醬料和海苔粉，鹹甜的口味令人愛不釋口。每一口都帶來飛魚卵爆漿的美味，極具幸福感。'],'PIC':['海龜燒','來這吃冰吧','小蝌蚪起司餅']}"},
+    {"role": "user", "content": "離開簡報模式"},
+    {"role": "assistant", "content": "None"},
+
     {"role": "user", "content": "以上是某一個主題的訓練範本，接下來的主題會截然不同，請記得以上的回應模式，但不要將主題內容跟後面的主題混為一談"},
 ]   
 
@@ -119,7 +122,7 @@ def get_ppt():
     status=1
     while status:
         input_param = request.get_json().get('inputParam')
-        print('接收的逐字稿',input_param)
+        print('接收的逐字稿 ppt',input_param)
         if "結束簡報模式" in input_param:
             status=0
             return jsonify(response='None')
