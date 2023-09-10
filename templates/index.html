@@ -5,11 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/openai"></script>
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/default.css') }}"id="cssLink">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
     <script src="https://apis.google.com/js/api.js"></script>
+    <!--JS連結-->
+    <script src="{{ url_for('static', filename='js/transcriptText.js') }}"></script><!--逐字稿-->
 
 
     <title>話中有畫－測試模板</title>
@@ -50,23 +52,20 @@
                 <span class="fs-4">話中有畫<span id="analysis-result"></span></span>
             </a>
           </header>
-
-
-
           <div class="row align-items-md-stretch">
             <div class="col-md-8">
                 <div class="h-100 p-5 rounded-3 position-relative" style="min-height: 550px;">
-                    <!-- <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3> -->
-                    <div class="image-container" id="image-container"></div>
-                    
-                    <h1 id="Title"></h1>
-                    <div id="LittleTitle"></div>
-                    <div id="Content"></div>
-                    <div id="PIC"></div>
-
-                    <p id="test-result"></p>
-                  
-
+                    <div class="ppt-container">
+                      <div class="slide">
+                        <h1 id="Title"></h1>
+                        <div class="container_PIC">
+                            <div id="LittleTitle"></div>
+                            <div id="PIC"></div>
+                        </div>
+                        <div id="table-container"></div>
+                        <div id="Content"></div>
+                      </div>
+                    </div>
                 </div>
             </div>
 
@@ -77,7 +76,6 @@
                 </div>
             </div>
         </div>
-
 
 
 
@@ -130,11 +128,9 @@
                 </div>
             </div>
         </div>
-
+        <!-- 語意分析 & 簡報模式 -->
         <script>
-            
             function sendTranscriptionForAnalysis(transcription,status) {
-                
             if(document.getElementById('analysis-result').textContent.includes("簡報模式")){
                 // 创建 XMLHttpRequest 对象
                 var xhr = new XMLHttpRequest();
@@ -146,7 +142,13 @@
                     if (xhr.readyState === 4 && xhr.status === 200) {
                         // 解析并获取分析结果
                         var response2 = JSON.parse(xhr.responseText).response;
-                        if(response2.includes("None")){
+                        var response_out = JSON.parse(xhr.responseText).response;
+                        if(response_out.includes("None")){
+                            response2="{'Title':'','LittleTitle':[],'Content':[],'PIC':[]}"
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
                             var responseElement = document.getElementById('analysis-result');
                             responseElement.textContent = '－'+"None";
                         }
@@ -157,9 +159,20 @@
                         var jsonObject = JSON.parse(jsonStr);
 
                         // 将分析结果更新到前端页面
-                        var responseElement2 = document.getElementById('test-result');
                         responseElement2.textContent = '－'+response2;
-                        if(response2.includes("None")){
+                        if(response_out.includes("None")){
+                            var titleElement = document.getElementById('Title');
+                            var littleTitleContainer = document.getElementById('LittleTitle');
+                            var contentContainer = document.getElementById('Content');
+                            var picContainer = document.getElementById('PIC');
+                            titleElement.innerText = '';
+                            littleTitleContainer.innerHTML = ''; // 清空子元素
+                            contentContainer.innerHTML = ''; // 清空子元素
+                            picContainer.innerHTML = ''; // 清空子元素
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
                             var responseElement = document.getElementById('analysis-result');
                             responseElement.textContent = '－'+"None";
                         }
@@ -172,7 +185,31 @@
                         littleTitleContainer.innerHTML = ''; // 清空子元素
                         contentContainer.innerHTML = ''; // 清空子元素
                         picContainer.innerHTML = ''; // 清空子元素
+                        // 根據接收的json 判斷要用哪個css
+                        const cssLink = document.getElementById('cssLink');
+
+                        // ppt版面格式的條件參數
+                        var condition = 1;
                         
+                        if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length==0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                            condition = 1;
+                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                            condition = 2;
+                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.PIC.length>=0){
+                            condition = 3;
+                        }else{
+                            condition = 1;
+                        }
+                        const cssFileName = `ppt${condition}.css`;
+                        // 更新link元素的href属性以应用所需的CSS文件
+                        cssLink.href = `static/css/${cssFileName}`;
+                        if (response_out.includes("None")){
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
+                        }
+
                         // 將資料放入對應的 HTML 元素
                         document.getElementById('Title').innerText = jsonObject.Title;
 
@@ -187,26 +224,47 @@
                         contentElement.innerText = jsonObject.Content[i];
                         document.getElementById('Content').appendChild(contentElement);
                         }
-
+                        // <img src="static/images/龍蝦洞.jpeg" alt="Image 1">
                         for (var i = 0; i < jsonObject.PIC.length; i++) {
-                        var picElement = document.createElement('img');
-                        picElement.src = jsonObject.PIC[i];
-                        document.getElementById('PIC').appendChild(picElement);
-                        }
+                        // 创建一个新的<div>元素来包装<img>
+                        var picDiv = document.createElement('div');
 
+                        // 创建<img>元素
+                        var picElement = document.createElement('img');
+                        picElement.src = "static/images/" + jsonObject.PIC[i] + ".jpeg";
+                        picElement.style.width = "200px";
+
+                        // 将<img>添加到新的<div>中
+                        picDiv.appendChild(picElement);
+
+                        // 将包含<img>的<div>添加到PIC容器
+                        document.getElementById('PIC').appendChild(picDiv);
+                    }
+
+                                            
                     }
                 };
-
                 // 发送请求
                 xhr.send(JSON.stringify({ inputParam: transcription }));
-                var responseElement2 = document.getElementById('test-result');
                 responseElement2.textContent = '－'+response2;
                 if(response2.includes("None")){
+                    var titleElement = document.getElementById('Title');
+                    var littleTitleContainer = document.getElementById('LittleTitle');
+                    var contentContainer = document.getElementById('Content');
+                    var picContainer = document.getElementById('PIC');
+                    titleElement.innerText = '';
+                    littleTitleContainer.innerHTML = ''; // 清空子元素
+                    contentContainer.innerHTML = ''; // 清空子元素
+                    picContainer.innerHTML = ''; // 清空子元素
+                    const cssLink = document.getElementById('cssLink');
+                    const cssFileName = `default.css`;
+                    // 更新link元素的href属性以应用所需的CSS文件
+                    cssLink.href = `static/css/${cssFileName}`;
                     var responseElement = document.getElementById('analysis-result');
                     responseElement.textContent = '－'+"None";
                 }
                 
-                
+            // 語意分析前端  
             }else{
                 // 创建 XMLHttpRequest 对象
                 var xhr = new XMLHttpRequest();
@@ -390,28 +448,7 @@
                 resultDiv.empty();
             }
         </script>
-        <!--節錄右側文字並生成逐字稿以及下載功能-->
-        <script>
-            var transcriptText='';
-            function showTranscript() {
-                $('#transcript-content').text(transcript_download);
-            }
-            function downloadTranscript() {
-                transcriptText = transcript_download;  // 這裡的 `transcript` 是逐字稿的文字內容
-                
-
-                // 建立 Blob 物件
-                var blob = new Blob([transcriptText], { type: 'text/plain' });
-
-                // 建立下載連結
-                var downloadLink = document.createElement('a');
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'transcript.txt';
-
-                // 觸發點擊事件下載檔案
-                downloadLink.click();
-            }
-        </script>
+        
         <!--大綱顯示及下載-->
         <script>
             // 获取加载动画元素
@@ -466,10 +503,6 @@
                 downloadLink.click();
             }
         </script>
-        
-      
-        
-        
         
         <footer class="pt-3 mt-4 text-body-secondary border-top"></footer>
         <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px" id="transcribe-btn" onclick="startTranscription()">開始</button>
