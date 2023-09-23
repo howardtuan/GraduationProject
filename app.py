@@ -2,6 +2,16 @@ import os
 import openai
 from flask import Flask, render_template, jsonify,request
 import json
+import livejson
+from sentence_transformers import SentenceTransformer, util
+from transformers import pipeline
+import torch
+import numpy as np
+
+#跑圖用的similarity
+translation = pipeline("translation", model = "Helsinki-NLP/opus-mt-zh-en") #翻譯中文轉成英文
+text_encode = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2') 
+
 
 with open('secret.json', 'r') as file:
     data = json.load(file)
@@ -42,8 +52,8 @@ def get_sentence_analyze():
       model="gpt-3.5-turbo-16k",
       messages=[
             #進入特殊模式後，需要另外寫進入該模式的邏輯
-            {"role": "system", "content": "你是負責判斷句子中重點含義的人，需要注意的點有以下：當語意是「用AI繪圖」，則回應「AI生圖」；當語意是「自己拍的照片」，則回應「相簿取圖」；當語意是「幫我查詢...或是該句子可以透過網路得到答案」，則回應「爬蟲模式」；當語意是「使用簡報」，則回應「簡報模式」；當語意是「產生圖表」，則回應「圖表模式」；若語意沒有以上的內容，則回應「None」，不可以有其他類型的回應，僅可以回應以上我允許的文字"},
-            {"role": "user", "content": "欸你看我昨天在日月潭拍的夕陽"},
+            {"role": "system", "content": "你是負責判斷句子中重點含義的人，需要注意的點有以下：當語意是「用AI繪圖」，則回應「AI生圖」；當語意是「給對方看自己拍的照片」，則回應「相簿取圖」；當語意是「幫我查詢...或是該句子可以透過網路得到答案」，則回應「爬蟲模式」；當語意是「使用簡報」，則回應「簡報模式」；當語意是「產生圖表」，則回應「圖表模式」；若語意沒有以上的內容，則回應「None」，不可以有其他類型的回應，僅可以回應以上我允許的文字"},
+            {"role": "user", "content": "打開相簿"},
             {"role": "assistant", "content": "相簿取圖"},
             {"role": "user", "content": "幫我用AI產生有一隻狗在草原上奔跑的圖"},
             {"role": "assistant", "content": "AI生圖"},
@@ -147,7 +157,25 @@ def get_ppt():
         return jsonify(response=completed_text)
         
         
+#相簿取圖
+@app.route("/SemanticAnalysis", methods=["POST"])
+def SemanticAnalysis():
+    openai.api_key = OPENAI_API_KEY
+    input_param = request.get_json().get('inputParam')
+    
+    encode_q = text_encode.encode(translation(input_param)[0]['translation_text'], convert_to_tensor = True).cpu()
+    sim_dict = {}
+    for arr_path in os.listdir("./static_arr/"):
+        encode = torch.from_numpy(np.load(os.path.join("./static_arr/", arr_path)))
+        sim_dict[os.path.join("*/static/images/", arr_path.split(".")[0].split("_")[-2] + "." + arr_path.split(".")[0].split("_")[-1])] = util.pytorch_cos_sim(encode_q, encode)    #將路徑與相似度得分存到字典
 
+    image_path=max(sim_dict, key = sim_dict.get)
+    # f = open("./static/imagePath.txt", "w")
+    # f.write(image_path)
+    # f.close()
+    print(image_path)
+
+    return jsonify(response=image_path)
 
     
     
