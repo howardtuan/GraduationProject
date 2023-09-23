@@ -365,9 +365,10 @@
                     transcriptionDiv.innerText = transcription;
                     transcriptText = transcription; // 将转录的内容赋值给 transcriptText
 
-                    var keywords = extractKeywords(transcript);
+                    // var keywords = extractKeywords(transcript);
                     hideImages();
-                    showImages(keywords);
+                    SemanticAnalysis(transcript);
+                    // showImages(keywords);
                     transcript_download = transcription; // 此变量要给下载的函数使用
                     // 调用函数发送转录内容给后端进行分析
                     var responseElement = document.getElementById('analysis-result');
@@ -388,6 +389,7 @@
         </script>
         <!--圖片顯示func-->
         <script>
+            // 以下暫時無用
             function extractKeywords(text) {
                 var keywords = [];
                 var keywordMap = {
@@ -423,7 +425,7 @@
             }
 
             function hideImages() {
-                var imageContainer = $('#image-container');
+                var imageContainer = $('.ppt-container');
                 imageContainer.empty();
             }
 
@@ -442,11 +444,70 @@
 
                 return keywordMap[keyword] || '';
             }
-
+            // 以上暫時無用
             function clearResult() {
                 var resultDiv = $('#result');
                 resultDiv.empty();
             }
+
+            //相簿取圖模式
+            function SemanticAnalysis(text) {
+                if(document.getElementById('analysis-result').textContent.includes("相簿取圖")){
+                    // 构造要发送的数据对象
+                    var requestData = {
+                        inputParam: text
+                    };
+                    
+                    // 发送 AJAX 请求到 Flask
+                    fetch("/SemanticAnalysis", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(requestData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        var result = data.response.split('*');
+                        console.log("轉換結果:" + result[1]);
+                        if (result[1].includes('images')) {
+                            //表示回傳結果有圖片路徑
+                            var imageContainer = $('.ppt-container');
+                            var imageElement = '<img src="' + result[1] + '" alt="關鍵字">';
+                            imageContainer.append(imageElement);
+                        }
+                    })
+                    .catch(error => {
+                        // console.log("请求出错:", error);
+                        // 创建 XMLHttpRequest 对象
+                        var xhr = new XMLHttpRequest();
+                        xhr.open("POST", "/get_sentence_analyze", true);
+                        xhr.setRequestHeader("Content-Type", "application/json");
+
+                        // 定义请求完成时的回调函数
+                        xhr.onreadystatechange = function () {
+                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                // 解析并获取分析结果
+                                var response = JSON.parse(xhr.responseText).response;
+                                console.log(response);
+
+                                // 将分析结果更新到前端页面
+                                var responseElement = document.getElementById('analysis-result');
+                                responseElement.textContent = '－'+response;
+
+                            }
+                        };
+
+                        // 发送请求
+                        xhr.send(JSON.stringify({ inputParam: transcription }));
+                        var responseElement = document.getElementById('analysis-result');
+                        responseElement.textContent = '－'+response;
+                        });
+    
+                }               
+                
+            }
+
         </script>
         
         <!--大綱顯示及下載-->
