@@ -13,7 +13,6 @@
     <!--JS連結-->
     <script src="{{ url_for('static', filename='js/transcriptText.js') }}"></script><!--逐字稿-->
 
-
     <title>話中有畫－測試模板</title>
 </head>
 
@@ -39,7 +38,23 @@
         .image-container img {
             margin-right: 10px;
         }
+        .map-container{
+            position: relative;
+            
+        }
+        #bigPic {
+            position: absolute; /* 使大图绝对定位相对于容器 */
+            top: 0; /* 调整大图的位置，根据实际需要进行调整 */
+            left: 0; /* 调整大图的位置，根据实际需要进行调整 */
+            z-index: 1; /* 设置大图的叠加顺序，位于上层 */
+        }
 
+        #smallPic {
+            position: absolute; /* 使小图绝对定位相对于容器 */
+            top: 300px; /* 调整小图的位置，根据实际需要进行调整 */
+            left: 400px; /* 调整小图的位置，根据实际需要进行调整 */
+            z-index: 2; /* 设置小图的叠加顺序，位于上层 */
+        }
     </style>
     <main>
         <div class="container py-4">
@@ -55,6 +70,11 @@
           <div class="row align-items-md-stretch">
             <div class="col-md-8">
                 <div class="h-100 p-5 rounded-3 position-relative" style="min-height: 550px;">
+                    <div class="map-container">
+                        <img src=""  width="700px" id="bigPic">
+                        <img src=""  width="300px" id="smallPic">
+                    </div>
+                    <h1 id="test"></h1>
                     <div class="ppt-container">
                       <div class="slide">
                         <h1 id="Title"></h1>
@@ -143,6 +163,7 @@
                         // 解析并获取分析结果
                         var response2 = JSON.parse(xhr.responseText).response;
                         var response_out = JSON.parse(xhr.responseText).response;
+                        
                         if(response_out.includes("None")){
                             response2="{'Title':'','LittleTitle':[],'Content':[],'PIC':[]}"
                             const cssLink = document.getElementById('cssLink');
@@ -158,8 +179,12 @@
                         // 解析 JSON 字串為 JavaScript 物件
                         var jsonObject = JSON.parse(jsonStr);
 
+
+
+
+
+
                         // 将分析结果更新到前端页面
-                        responseElement2.textContent = '－'+response2;
                         if(response_out.includes("None")){
                             var titleElement = document.getElementById('Title');
                             var littleTitleContainer = document.getElementById('LittleTitle');
@@ -184,18 +209,22 @@
                         titleElement.innerText = '';
                         littleTitleContainer.innerHTML = ''; // 清空子元素
                         contentContainer.innerHTML = ''; // 清空子元素
-                        picContainer.innerHTML = ''; // 清空子元素
+                        // picContainer.innerHTML = ''; // 清空子元素
                         // 根據接收的json 判斷要用哪個css
                         const cssLink = document.getElementById('cssLink');
+                        
+
+                    
+
 
                         // ppt版面格式的條件參數
                         var condition = 1;
                         
-                        if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length==0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                        if(jsonObject['Title'].length>0 & jsonObject['LittleTitle'].length==0 & jsonObject['Content'].length==0 &jsonObject['PIC'].length==0){
                             condition = 1;
-                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                        }else if(jsonObject['Title'].length>0 & jsonObject['LittleTitle'].length>0 & jsonObject['Content'].length==0 &jsonObject['PIC'].length==0){
                             condition = 2;
-                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.PIC.length>=0){
+                        }else if(jsonObject['Title'].length>0 & jsonObject['LittleTitle'].length>0 & jsonObject['PIC'].length>=0){
                             condition = 3;
                         }else{
                             condition = 1;
@@ -209,23 +238,23 @@
                             // 更新link元素的href属性以应用所需的CSS文件
                             cssLink.href = `static/css/${cssFileName}`;
                         }
-
+                        
                         // 將資料放入對應的 HTML 元素
                         document.getElementById('Title').innerText = jsonObject.Title;
 
-                        for (var i = 0; i < jsonObject.LittleTitle.length; i++) {
+                        for (var i = 0; i < jsonObject['LittleTitle'].length; i++) {
                         var littleTitleElement = document.createElement('div');
                         littleTitleElement.innerText = jsonObject.LittleTitle[i];
                         document.getElementById('LittleTitle').appendChild(littleTitleElement);
                         }
 
-                        for (var i = 0; i < jsonObject.Content.length; i++) {
+                        for (var i = 0; i < jsonObject['Content'].length; i++) {
                         var contentElement = document.createElement('div');
                         contentElement.innerText = jsonObject.Content[i];
                         document.getElementById('Content').appendChild(contentElement);
                         }
                         // <img src="static/images/龍蝦洞.jpeg" alt="Image 1">
-                        for (var i = 0; i < jsonObject.PIC.length; i++) {
+                        for (var i = 0; i < jsonObject['PIC'].length; i++) {
                         // 创建一个新的<div>元素来包装<img>
                         var picDiv = document.createElement('div');
 
@@ -260,6 +289,70 @@
                     const cssFileName = `default.css`;
                     // 更新link元素的href属性以应用所需的CSS文件
                     cssLink.href = `static/css/${cssFileName}`;
+                    var responseElement = document.getElementById('analysis-result');
+                    responseElement.textContent = '－'+"None";
+                }
+                
+         
+            }else if(document.getElementById('analysis-result').textContent.includes("地圖模式")){
+                // 创建 XMLHttpRequest 对象
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/get_map", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+
+                // 定义请求完成时的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // 解析并获取分析结果
+                        var response2 = JSON.parse(xhr.responseText).response;
+                        var response_out = JSON.parse(xhr.responseText).response;
+                        
+                        if(response_out.includes("None")){
+                            var mapContainer = document.getElementById('map-container');
+                            mapContainer.innerHTML = ''; // 清空子元素
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 將單引號替換為雙引號，以符合 JSON 格式
+                        jsonStr = response2.replace(/'/g, '"');
+
+                        // 解析 JSON 字串為 JavaScript 物件
+                        var jsonObject = JSON.parse(jsonStr);
+
+                        
+                        console.log(jsonObject)
+                        // 将分析结果更新到前端页面
+                        if(response_out.includes("None")){
+                            var mapContainer = document.getElementById('map-container');
+                            mapContainer.innerHTML = ''; // 清空子元素
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 初始化
+                        
+                        // 將資料放入對應的 HTML 元素
+                        var bigPic = document.getElementById('bigPic');
+                        var smallPic = document.getElementById('smallPic');
+                        var aaa = document.getElementById('test');
+                        aaa.textContent = jsonObject;
+                        // 设置大图的 src
+                        bigPic.src = 'static/images/'+jsonObject.map + '.jpeg';
+                        // 检查 map_detail 是否为空
+                        if (jsonObject.map_detail !== '') {
+                        // 设置小图的 src，仅当 map_detail 不为空时
+                        smallPic.src =  'static/images/'+jsonObject.map_detail + '.jpeg';
+                        }
+                                            
+
+                                            
+                    }
+                };
+                // 发送请求
+                xhr.send(JSON.stringify({ inputParam: transcription }));
+                responseElement2.textContent = '－'+response2;
+                if(response2.includes("None")){
+                    var mapContainer = document.getElementById('map-container');
+                    mapContainer.innerHTML = ''; // 清空子元素
                     var responseElement = document.getElementById('analysis-result');
                     responseElement.textContent = '－'+"None";
                 }

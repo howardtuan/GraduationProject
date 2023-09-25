@@ -1,5 +1,7 @@
 .ppt-container {
-    background-color: #ffffff;
+    background-image: url("../images/bg.jpeg");
+    background-size: cover; /* 使用cover讓圖像填滿容器 */
+    background-repeat: no-repeat;
     border-radius: 10px;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
     padding: 40px;
@@ -7,7 +9,6 @@
     max-width: 100%; /* 最大寬度也可以調整 */
     height: 80%;
 }
-
 .slide {
     /* 根據您的需求設置每個幻燈片的樣式 */
     margin-bottom: 20px; /* 幻燈片之間的間距 */
@@ -26,7 +27,8 @@
     margin-left: 40%;
 }
 #LittleTitle div{
-    margin-top:25px;
+    margin-top:40px;
+    color:rgb(225, 86, 86)
 }
 
 #Content {
