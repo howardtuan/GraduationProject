@@ -175,7 +175,7 @@ map_initMessage="""
     你是一個地圖小幫手，
     使用者會輸入幾句話，你要負責找到對應的圖片名稱
     請用python的字典格式{'map':'','map_detail':''}來回答
-    只有接收到「空白地圖」，map_detail才會為空，且map的value值開頭會加上「M」
+    只有使用者輸入「開啟地圖」，map_detail才會為空，且map的value值開頭會加上「M」，會回傳{'map':'M地圖','map_detail':''}
     若使用者輸入「離開地圖模式」，則回傳"None"字串即可。
     """
 map_messages_db = [
