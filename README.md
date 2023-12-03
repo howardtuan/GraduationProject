@@ -12,4 +12,12 @@ run app.py
 ----2023/05/21
 除了大綱以外，其他都正常顯示！
 目前的語音轉文字功能在按開始時，要等個1~2秒才會run
+----2023/06/01
+離開conda：
+conda deactivate
+進入虛擬環境指令：
+source venv/bin/activate
+----2023/06/10
+已將demo內容整合進Main分支，之後測試的檔案都丟入code_test裡面！
+記得要把secret.json放入與app.py同層的資料夾中
 </pre>

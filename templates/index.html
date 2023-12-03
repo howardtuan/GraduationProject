@@ -4,11 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/openai"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/default.css') }}"id="cssLink">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <!--JS連結-->
+    <script src="{{ url_for('static', filename='js/transcriptText.js') }}"></script><!--逐字稿-->
+
+
     <title>話中有畫－測試模板</title>
 </head>
+
 <body>
     <style>
         .modal-dialog {
@@ -41,34 +49,39 @@
                     <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
                     <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
                 </svg>
-                <span class="fs-4">話中有畫－測試模板</span>
+                <span class="fs-4">話中有畫<span id="analysis-result"></span></span>
             </a>
           </header>
-
-
-
           <div class="row align-items-md-stretch">
             <div class="col-md-8">
                 <div class="h-100 p-5 rounded-3 position-relative" style="min-height: 550px;">
-                    <!-- <h3 style="margin-top: -30px;margin-left: -30px;">圖片區</h3> -->
-                    <div class="image-container" id="image-container"></div>
+                    <div class="ppt-container">
+                      <div class="slide">
+                        <h1 id="Title"></h1>
+                        <div class="container_PIC">
+                            <div id="LittleTitle"></div>
+                            <div id="PIC"></div>
+                        </div>
+                        <div id="table-container"></div>
+                        <div id="Content"></div>
+                      </div>
+                    </div>
                 </div>
             </div>
-            
+
             <div class="col-md-4">
                 <div class="h-100 p-5 p-2 text-dark bg-opacity-10 rounded-3" style="height: 550px; max-height: 550px; overflow-y: auto;">
                     <!-- <h3 style="margin-top: -30px;margin-left: -30px;">文字區</h3> -->
-                    <div id="result"></div>
+                    <h3><div id="result"></div></h3>
                 </div>
             </div>
         </div>
-        
-        
-        
+
+
 
         <p></p>
 
-        
+
         <!-- Modal 彈出視窗 -->
         <div class="modal fade" id="scriptModal" tabindex="-1" aria-labelledby="scriptModalLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -97,97 +110,286 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div id="loading-spinner" class="d-none">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                            <div class="text-center mt-2">正在生成對話大綱...</div>
+                        </div>
                         <pre id="dialogue-summary-content"></pre>
                     </div>
-
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                        <button type="button" class="btn btn-warning" id="outline">生成對話大綱</button>
                         <button type="button" class="btn btn-primary" onclick="downloadoutline()">下載對話大綱</button>
                     </div>
                 </div>
             </div>
         </div>
-
+        <!-- 語意分析 & 簡報模式 -->
         <script>
-            var isTranscribing = false;  // 記錄是否正在進行語音轉文字
-            var isPaused = false;  // 記錄是否暫停
-            var currentKeywords = [];  // 紀錄目前關鍵字
-            var transcript = '';  // 存儲逐字稿
-            var dialogueSummary = ''; // 存儲對話摘要
-            var startTime = null;  // 開始時間
-            var outline = '';   //存儲轉換摘要用文字稿
+            function sendTranscriptionForAnalysis(transcription,status) {
+            if(document.getElementById('analysis-result').textContent.includes("簡報模式")){
+                // 创建 XMLHttpRequest 对象
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/get_ppt", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
 
-            function toggleTranscription() {
-                isTranscribing = !isTranscribing;  // 切換狀態
+                // 定义请求完成时的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // 解析并获取分析结果
+                        var response2 = JSON.parse(xhr.responseText).response;
+                        var response_out = JSON.parse(xhr.responseText).response;
+                        if(response_out.includes("None")){
+                            response2="{'Title':'','LittleTitle':[],'Content':[],'PIC':[]}"
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 將單引號替換為雙引號，以符合 JSON 格式
+                        jsonStr = response2.replace(/'/g, '"');
 
-                if (isTranscribing) {
-                    startTranscription();
-                } else {
-                    stopTranscription();
-                }
-            }
+                        // 解析 JSON 字串為 JavaScript 物件
+                        var jsonObject = JSON.parse(jsonStr);
 
-            function togglePause() {
-                isPaused = !isPaused;  // 切換狀態
+                        // 将分析结果更新到前端页面
+                        responseElement2.textContent = '－'+response2;
+                        if(response_out.includes("None")){
+                            var titleElement = document.getElementById('Title');
+                            var littleTitleContainer = document.getElementById('LittleTitle');
+                            var contentContainer = document.getElementById('Content');
+                            var picContainer = document.getElementById('PIC');
+                            titleElement.innerText = '';
+                            littleTitleContainer.innerHTML = ''; // 清空子元素
+                            contentContainer.innerHTML = ''; // 清空子元素
+                            picContainer.innerHTML = ''; // 清空子元素
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
+                            var responseElement = document.getElementById('analysis-result');
+                            responseElement.textContent = '－'+"None";
+                        }
+                        // 初始化
+                        var titleElement = document.getElementById('Title');
+                        var littleTitleContainer = document.getElementById('LittleTitle');
+                        var contentContainer = document.getElementById('Content');
+                        var picContainer = document.getElementById('PIC');
+                        titleElement.innerText = '';
+                        littleTitleContainer.innerHTML = ''; // 清空子元素
+                        contentContainer.innerHTML = ''; // 清空子元素
+                        picContainer.innerHTML = ''; // 清空子元素
+                        // 根據接收的json 判斷要用哪個css
+                        const cssLink = document.getElementById('cssLink');
 
-                if (isPaused) {
-                    $('#pause-btn').text('繼續');
-                } else {
-                    $('#pause-btn').text('暫停');
-                }
-            }
-
-            function startTranscription() {
-                $('#transcribe-btn').text('結束');
-                startTime = new Date();
-                transcribe();
-            }
-
-            function stopTranscription() {
-                $('#transcribe-btn').text('開始');
-                startTime = null;
-                hideImages();
-            }
-
-            function transcribe() {
-                if (isPaused) {
-                    setTimeout(transcribe, 1000);  // 暫停時延遲1秒後繼續執行
-                    return;
-                }
-
-                $.ajax({
-                    url: '/transcribe',
-                    type: 'GET',
-                    success: function(response) {
-                        var text = response.text;
-                        var resultDiv = $('#result');
-                        var currentTime = getFormattedTime();
-                        resultDiv.append(currentTime + ' User: ' + text + '<br>');
-                        transcript += currentTime + ' User: ' + text + '\n';
-                        outline += text+'\n';
-
-                        var keywords = extractKeywords(text);
-
-                        hideImages();
-
-                        if (keywords.length > 0) {
-                            showImages(keywords);
+                        // ppt版面格式的條件參數
+                        var condition = 1;
+                        
+                        if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length==0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                            condition = 1;
+                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.Content.length==0 &jsonObject.PIC.length==0){
+                            condition = 2;
+                        }else if(jsonObject.Title.length>0 & jsonObject.LittleTitle.length>0 & jsonObject.PIC.length>=0){
+                            condition = 3;
+                        }else{
+                            condition = 1;
+                        }
+                        const cssFileName = `ppt${condition}.css`;
+                        // 更新link元素的href属性以应用所需的CSS文件
+                        cssLink.href = `static/css/${cssFileName}`;
+                        if (response_out.includes("None")){
+                            const cssLink = document.getElementById('cssLink');
+                            const cssFileName = `default.css`;
+                            // 更新link元素的href属性以应用所需的CSS文件
+                            cssLink.href = `static/css/${cssFileName}`;
                         }
 
-                        currentKeywords = keywords;
+                        // 將資料放入對應的 HTML 元素
+                        document.getElementById('Title').innerText = jsonObject.Title;
 
-                        if (isTranscribing) {
-                            transcribe();
+                        for (var i = 0; i < jsonObject.LittleTitle.length; i++) {
+                        var littleTitleElement = document.createElement('div');
+                        littleTitleElement.innerText = jsonObject.LittleTitle[i];
+                        document.getElementById('LittleTitle').appendChild(littleTitleElement);
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        if (isTranscribing) {
-                            transcribe();
+
+                        for (var i = 0; i < jsonObject.Content.length; i++) {
+                        var contentElement = document.createElement('div');
+                        contentElement.innerText = jsonObject.Content[i];
+                        document.getElementById('Content').appendChild(contentElement);
                         }
+                        // <img src="static/images/龍蝦洞.jpeg" alt="Image 1">
+                        for (var i = 0; i < jsonObject.PIC.length; i++) {
+                        // 创建一个新的<div>元素来包装<img>
+                        var picDiv = document.createElement('div');
+
+                        // 创建<img>元素
+                        var picElement = document.createElement('img');
+                        picElement.src = "static/images/" + jsonObject.PIC[i] + ".jpeg";
+                        picElement.style.width = "200px";
+
+                        // 将<img>添加到新的<div>中
+                        picDiv.appendChild(picElement);
+
+                        // 将包含<img>的<div>添加到PIC容器
+                        document.getElementById('PIC').appendChild(picDiv);
                     }
-                });
+
+                                            
+                    }
+                };
+                // 发送请求
+                xhr.send(JSON.stringify({ inputParam: transcription }));
+                responseElement2.textContent = '－'+response2;
+                if(response2.includes("None")){
+                    var titleElement = document.getElementById('Title');
+                    var littleTitleContainer = document.getElementById('LittleTitle');
+                    var contentContainer = document.getElementById('Content');
+                    var picContainer = document.getElementById('PIC');
+                    titleElement.innerText = '';
+                    littleTitleContainer.innerHTML = ''; // 清空子元素
+                    contentContainer.innerHTML = ''; // 清空子元素
+                    picContainer.innerHTML = ''; // 清空子元素
+                    const cssLink = document.getElementById('cssLink');
+                    const cssFileName = `default.css`;
+                    // 更新link元素的href属性以应用所需的CSS文件
+                    cssLink.href = `static/css/${cssFileName}`;
+                    var responseElement = document.getElementById('analysis-result');
+                    responseElement.textContent = '－'+"None";
+                }
+                
+            // 語意分析前端  
+            }else{
+                // 创建 XMLHttpRequest 对象
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "/get_sentence_analyze", true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+
+                // 定义请求完成时的回调函数
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        // 解析并获取分析结果
+                        var response = JSON.parse(xhr.responseText).response;
+
+                        // 将分析结果更新到前端页面
+                        var responseElement = document.getElementById('analysis-result');
+                        responseElement.textContent = '－'+response;
+
+                    }
+                };
+
+                // 发送请求
+                xhr.send(JSON.stringify({ inputParam: transcription }));
+                var responseElement = document.getElementById('analysis-result');
+                responseElement.textContent = '－'+response;
+            }
+            
+            
+            
+
+        }
+
+        </script>
+        
+        <!--語音轉文字-->
+        <script>
+            // 在 HTML 中建立一個 <div> 元素來顯示轉換後的文字
+            const transcriptionDiv = document.getElementById('result');
+
+            // 建立語音轉文字的請求參數
+            const request = {
+                config: {
+                    encoding: 'LINEAR16',
+                    sampleRateHertz: 16000,
+                    languageCode: 'en-US'
+                },
+                interimResults: true // 可選，如果設置為 true，則會返回臨時結果
+            };
+
+            // 建立一個變數來儲存正在轉換的文字
+            let transcription = '';
+
+            // 建立一個 SpeechRecognition 物件
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            // 開始轉換語音為文字
+            function startTranscription() {
+                // 清空先前的文字
+                transcription = '';
+                transcriptionDiv.innerText = '';
+
+                // 開始錄音
+                recognition.start();
             }
 
+            // 停止轉換語音為文字
+            function stopTranscription() {
+                // 停止錄音
+                recognition.stop();
+            }
+
+            // 建立一个变量来存储上一句话的结束时间
+            let previousEndTime = 0.0;
+
+            // 處理語音轉換結果
+            recognition.onresult = event => {
+                const result = event.results[event.results.length - 1];
+                const transcript = result[0].transcript.trim();
+                transcriptionDiv.innerText = '';
+
+                if (result.isFinal && transcript !== '') {
+                    // 確定結果且不為空白時，將結果加到轉錄中
+                    transcription += 'User：' + transcript + '\n';
+
+                    // 計算接收時間間隔
+                    const startTime = result.startTime;
+                    const endTime = result.endTime;
+                    const duration = startTime - previousEndTime;
+                    
+                    if (duration > 0.2) {
+                        // 当间隔时间超过 0.2 秒时，将结果作为新的一句话
+                        transcription += '\n';
+                    }
+
+                    // 更新上一句话的结束时间
+                    previousEndTime = endTime;
+
+                    transcriptionDiv.innerText = transcription;
+                    transcriptText = transcription; // 将转录的内容赋值给 transcriptText
+
+                    // var keywords = extractKeywords(transcript);
+                    hideImages();
+                    SemanticAnalysis(transcript);
+                    // showImages(keywords);
+                    transcript_download = transcription; // 此变量要给下载的函数使用
+                    // 调用函数发送转录内容给后端进行分析
+                    var responseElement = document.getElementById('analysis-result');
+                    sendTranscriptionForAnalysis(transcript,responseElement);
+                    
+                } else {
+                    transcriptionDiv.innerText = transcription + 'User：' + transcript;
+                }
+            };
+
+            // 在 HTML 中的按鈕綁定開始轉換的函式
+            document.getElementById('transcribe-btn').addEventListener('click', startTranscription);
+
+            // 在 HTML 中的按鈕綁定停止轉換的函式
+            document.getElementById('pause-btn').addEventListener('click', stopTranscription);
+            // 載入 Google Cloud Platform
+            loadGoogleCloudPlatform();
+        </script>
+        <!--圖片顯示func-->
+        <script>
+            // 以下暫時無用
             function extractKeywords(text) {
                 var keywords = [];
                 var keywordMap = {
@@ -223,7 +425,7 @@
             }
 
             function hideImages() {
-                var imageContainer = $('#image-container');
+                var imageContainer = $('.ppt-container');
                 imageContainer.empty();
             }
 
@@ -242,101 +444,113 @@
 
                 return keywordMap[keyword] || '';
             }
-
+            // 以上暫時無用
             function clearResult() {
                 var resultDiv = $('#result');
                 resultDiv.empty();
             }
 
-            function showTranscript() {
-                $('#transcript-content').text(transcript);
+            //相簿取圖模式
+            function SemanticAnalysis(text) {
+                if(document.getElementById('analysis-result').textContent.includes("相簿取圖")){
+                    // 构造要发送的数据对象
+                    var requestData = {
+                        inputParam: text
+                    };
+                    
+                    // 发送 AJAX 请求到 Flask
+                    fetch("/SemanticAnalysis", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(requestData)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        var result = data.response.split('*');
+                        console.log("轉換結果:" + result[1]);
+                        if (result[1].includes('images')) {
+                            //表示回傳結果有圖片路徑
+                            var imageContainer = $('.ppt-container');
+                            var imageElement = '<img src="' + result[1] + '" alt="關鍵字" width="500px">';
+                            imageContainer.append(imageElement);
+                        }
+                    })
+                    .catch(error => {
+                        // console.log("请求出错:", error);
+                        // 创建 XMLHttpRequest 对象
+                        var xhr = new XMLHttpRequest();
+                        xhr.open("POST", "/get_sentence_analyze", true);
+                        xhr.setRequestHeader("Content-Type", "application/json");
+
+                        // 定义请求完成时的回调函数
+                        xhr.onreadystatechange = function () {
+                            if (xhr.readyState === 4 && xhr.status === 200) {
+                                // 解析并获取分析结果
+                                var response = JSON.parse(xhr.responseText).response;
+                                console.log(response);
+
+                                // 将分析结果更新到前端页面
+                                var responseElement = document.getElementById('analysis-result');
+                                responseElement.textContent = '－'+response;
+
+                            }
+                        };
+
+                        // 发送请求
+                        xhr.send(JSON.stringify({ inputParam: transcription }));
+                        var responseElement = document.getElementById('analysis-result');
+                        responseElement.textContent = '－'+response;
+                        });
+    
+                }               
+                
             }
 
-            function getFormattedTime() {
-                if (startTime) {
-                    var currentTime = new Date();
-                    var elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
-                    var hours = Math.floor(elapsedSeconds / 3600);
-                    var minutes = Math.floor((elapsedSeconds % 3600) / 60);
-                    var seconds = elapsedSeconds % 60;
+        </script>
+        
+        <!--大綱顯示及下載-->
+        <script>
+            // 获取加载动画元素
+            var loadingSpinner = document.getElementById('loading-spinner');
 
-                    var formattedTime = hours.toString().padStart(2, '0') + ':' +
-                                        minutes.toString().padStart(2, '0') + ':' +
-                                        seconds.toString().padStart(2, '0');
+            // 监听按钮点击事件
+            document.getElementById("outline").addEventListener("click", function() {
+                // 显示加载动画
+                loadingSpinner.classList.remove('d-none');
 
-                    return formattedTime;
-                }
+                // 构造要发送的数据对象
+                var requestData = {
+                    inputParam: transcriptText
+                };
 
-                return '';
-            }
-
-            function downloadTranscript() {
-                var transcriptText = transcript;  // 這裡的 `transcript` 是逐字稿的文字內容
-
-                // 建立 Blob 物件
-                var blob = new Blob([transcriptText], { type: 'text/plain' });
-
-                // 建立下載連結
-                var downloadLink = document.createElement('a');
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'transcript.txt';
-
-                // 觸發點擊事件下載檔案
-                downloadLink.click();
-            }
-
-            function generateDialogueSummary() {
-                var transcriptLines = outline.split('\n'); // 將逐字稿以換行符拆分成行數
-                var summary = '';
-
-                for (var i = 0; i < transcriptLines.length; i++) {
-                    var line = transcriptLines[i];
-
-                    // 忽略使用者和時間的行數
-                    if (!line.includes('User:') && !line.includes('AI:') && !line.includes('[')) {
-                        summary += line + '\n';
-                    }
-                }
-
-                // 在摘要前後移除多餘的空白
-                summary = summary.trim();
-
-                $.ajax({
-                    url: '/outline',
-                    type: 'POST',
-                    data: JSON.stringify({ value: summary }),
-                    contentType: 'application/json',
-                    success: function(response) {
-                        console.log('Response from Python:', result);
+                // 发送 AJAX 请求到 Flask
+                fetch("/get_dialogue_summary", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
                     },
-                    error: function(xhr, status, error) {
-                        console.log(error);
-                    }
-                });
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // 隐藏加载动画
+                    loadingSpinner.classList.add('d-none');
 
-                //return summary;
-            }
-            var sss = '';
-            function showDialogueSummary() {
-                generateDialogueSummary();
-                $.ajax({
-                    url: '/outline',
-                    type: 'POST',
-                    data: JSON.stringify({ value: outline }),  // 修改這裡的參數為 outline
-                    contentType: 'application/json',
-                    success: function(response) {
-                        sss += response.data + '\n';  // 將回傳的摘要資料串接到 `sss` 變數中
-                        var summaryContent = document.getElementById('dialogue-summary-content');
-                        summaryContent.innerText = sss;  // 將摘要資料顯示在彈出視窗中
-                    },
-                    error: function(xhr, status, error) {
-                        console.log(error);
-                    }
+                    // 将 chat GPT 的响应内容插入到 <pre id="dialogue-summary-content"></pre> 元素中
+                    document.getElementById("dialogue-summary-content").textContent = data.response;
+                })
+                .catch(error => {
+                    console.log("请求出错:", error);
+                    // 隐藏加载动画（在错误情况下）
+                    loadingSpinner.classList.add('d-none');
                 });
-            }
+            });
 
+            //下載大綱
             function downloadoutline() {
-                var outlineText = sss;  // 這裡的 `transcript` 是逐字稿的文字內容
+                outlineText = document.getElementById("dialogue-summary-content").textContent ; 
 
                 // 建立 Blob 物件
                 var blob = new Blob([outlineText], { type: 'text/plain' });
@@ -344,26 +558,21 @@
                 // 建立下載連結
                 var downloadLink = document.createElement('a');
                 downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'Outline.txt';
+                downloadLink.download = 'outline.txt';
 
                 // 觸發點擊事件下載檔案
                 downloadLink.click();
             }
-
-
-
-
-
         </script>
-        <!--© 話中有畫-->
-        <footer class="pt-3 mt-4 text-body-secondary border-top"> </footer>
-        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px"id="transcribe-btn" onclick="toggleTranscription()">開始</button>
-        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px" id="pause-btn" onclick="togglePause()">暫停</button>
-        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px"id="clear-btn" onclick="clearResult()">清空文字區域</button>
-
+        
+        <footer class="pt-3 mt-4 text-body-secondary border-top"></footer>
+        <button type="button" class="btn btn-outline-secondary btn-lg" style="margin-right:5px" id="transcribe-btn" onclick="startTranscription()">開始</button>
+        <button type="button" class="btn btn-outline-success btn-lg" style="margin-right:5px" id="pause-btn" onclick="stopTranscription()">暫停</button>
+        <button type="button" class="btn btn-outline-danger btn-lg" style="margin-right:5px" id="clear-btn" onclick="clearResult()">清空文字區域</button>
+    
         <button type="button" class="btn btn-outline-dark btn-lg" style="margin-right:5px" data-bs-toggle="modal" data-bs-target="#scriptModal" onclick="showTranscript()">逐字稿生成</button>
-        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#scriptModal2" onclick="showDialogueSummary()">對話大綱</button>
-        </div>
-      </main>
-</body>
+        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#scriptModal2">對話大綱</button>
+    
+    </main>
+    </body>
 </html>
