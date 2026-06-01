@@ -1,1 +1,25 @@
-{"./static/images/001.jpeg": "a pile of rocks on top of a beach ", "./static/images/828eaa7a3469666631769e73a736cf18.jpeg": "a car with a red stripe on it's roof ", "./static/images/beach.jpg": "a beach with a body of water and a beach with a few trees ", "./static/images/bid3.png": "a bird with a bird on its head ", "./static/images/boat.jpg": "a boat sitting on top of a sandy beach ", "./static/images/cat.jpeg": "a cat is jumping up in the air ", "./static/images/dogt.jpeg": "a dog is sitting on the ground with its tongue out ", "./static/images/frog.jpeg": "a pile of rocks on top of a beach ", "./static/images/gg.png": "a plate of food with vegetables and meat ", "./static/images/gg2.png": "a food truck with a sign on the side ", "./static/images/kg.jpg": "a giraffe standing in the middle of a snowy field ", "./static/images/map.png": "a series of photos showing a series of mountains ", "./static/images/news.png": "a cloudy sky with a cloud of clouds ", "./static/images/p1.jpeg": "a white and black square shaped door with a white background ", "./static/images/p2.jpeg": "a black and white photo of a clock ", "./static/images/p3.jpeg": "a series of images showing a person's face and a clock ", "./static/images/p4.jpeg": "a white screen with a number on it ", "./static/images/picA.png": "a sunset with a sunset view of a lake ", "./static/images/picB.png": "a large body of water with a boat in it ", "./static/images/poto.png": "a series of colorful photographs of a colorful object ", "./static/images/ttt.jpg": "a forest filled with trees and bushes ", "./static/images/\u82b1\u74f6\u5ca9.jpeg": "a bird flying over a rocky beach ", "./static/images/\u9f8d\u8766\u6d1e.jpeg": "a river with a waterfall and a rock wall "}
+{
+  "./static/images/001.jpeg": "小琉球海岸岩石與海邊風景",
+  "./static/images/828eaa7a3469666631769e73a736cf18.jpeg": "道路上的汽車與紅色車頂",
+  "./static/images/beach.jpg": "海灘、海水與戶外旅遊景色",
+  "./static/images/bid3.png": "鳥類與動物照片",
+  "./static/images/boat.jpg": "沙灘旁的小船與海邊場景",
+  "./static/images/cat.jpeg": "跳起來的貓咪",
+  "./static/images/dogt.jpeg": "坐在草地上的狗狗",
+  "./static/images/frog.jpeg": "青蛙與自然生態",
+  "./static/images/gg.png": "鹹水雞、蔬菜與美食餐點",
+  "./static/images/gg2.png": "餐車、招牌與街邊美食",
+  "./static/images/kg.jpg": "雪地中的長頸鹿",
+  "./static/images/map.png": "地圖、路線與位置資訊",
+  "./static/images/news.png": "新聞、雲層與資訊畫面",
+  "./static/images/p1.jpeg": "十字路口、門口與街道路線",
+  "./static/images/p2.jpeg": "日新路、時鐘與街景",
+  "./static/images/p3.jpeg": "屈臣氏店面與招牌",
+  "./static/images/p4.jpeg": "對面位置與數字畫面",
+  "./static/images/picA.png": "夕陽、湖泊與風景",
+  "./static/images/picB.png": "水域、湖泊與船隻",
+  "./static/images/poto.png": "彩色照片與生活物件",
+  "./static/images/ttt.jpg": "森林、樹木與自然環境",
+  "./static/images/花瓶岩.jpeg": "小琉球花瓶岩、珊瑚礁與旅遊景點",
+  "./static/images/龍蝦洞.jpeg": "小琉球龍蝦洞、海蝕溝與天然洞穴"
+}

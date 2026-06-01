@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talk2draw-app
+    env_file:
+      - .env
+    environment:
+      # Local container defaults: production server path with HTTP-friendly dev settings.
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0"
+      DJANGO_SECURE_SSL_REDIRECT: "False"
+      DJANGO_SESSION_COOKIE_SECURE: "False"
+      DJANGO_CSRF_COOKIE_SECURE: "False"
+      DJANGO_SECURE_HSTS_SECONDS: "0"
+      DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: "False"
+      DJANGO_SECURE_HSTS_PRELOAD: "False"
+      SQLITE_DATABASE_PATH: "/app/data/db.sqlite3"
+    ports:
+      - "8000:8000"
+    volumes:
+      - talk2draw_data:/app/data
+      - talk2draw_media:/app/media
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  talk2draw_data:
+  talk2draw_media:
