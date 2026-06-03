@@ -26,7 +26,8 @@ RUN python -m pip install --upgrade pip \
 COPY . /app
 
 # Static files are collected at build time and served by Whitenoise in the app.
-RUN chmod +x /app/docker/entrypoint.sh \
+RUN sed -i 's/\r$//' /app/docker/entrypoint.sh \
+    && chmod +x /app/docker/entrypoint.sh \
     && python manage.py collectstatic --noinput
 
 EXPOSE 8000

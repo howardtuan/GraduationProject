@@ -1,17 +1,15 @@
 """Business logic for Talk2Draw's three major modules.
 
 The service layer keeps Django views thin and gives every AI feature a safe
-fallback so the app can still be tested before production API keys are filled.
+fallback so the app can still be tested when Ollama is not available.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import base64
 import json
 import re
-import uuid
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
 from django.conf import settings
@@ -26,60 +24,63 @@ NEXT_SLIDE_WORDS = ("下一頁", "下一張", "換頁", "新投影片")
 
 
 class AIUnavailable(RuntimeError):
-    """Raised when an OpenAI-backed feature cannot be executed."""
+    """Raised when a configured AI-backed feature cannot be executed."""
 
 
 @dataclass
 class AITextClient:
-    """Small wrapper that supports both modern and older OpenAI SDK styles."""
+    """Small wrapper around Ollama's local chat API."""
 
-    api_key: str
+    base_url: str
     model: str
-
-    def _client(self):
-        """Import OpenAI lazily so rule-based tests do not need the package."""
-        if not self.api_key:
-            raise AIUnavailable("OPENAI_API_KEY is not configured.")
-        try:
-            from openai import OpenAI
-        except ImportError as exc:  # pragma: no cover - covered by dependency install.
-            raise AIUnavailable("The openai package is not installed.") from exc
-        return OpenAI(api_key=self.api_key)
+    timeout: int = 30
 
     def complete(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> str:
-        """Return model text using Responses API first, then Chat Completions."""
-        client = self._client()
+        """Return model text from a local Ollama chat model."""
+        if not self.base_url or not self.model:
+            raise AIUnavailable("OLLAMA_BASE_URL and OLLAMA_CHAT_MODEL must be configured.")
         try:
-            response = client.responses.create(
-                model=self.model,
-                input=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
-            )
-            text = getattr(response, "output_text", "")
-            if text:
-                return text.strip()
-        except Exception:
-            # Some older SDKs or models may not expose Responses API; the
-            # fallback keeps deployments flexible without changing app code.
-            pass
+            import requests
+        except ImportError as exc:  # pragma: no cover - covered by dependency install.
+            raise AIUnavailable("The requests package is not installed.") from exc
 
-        completion = client.chat.completions.create(
-            model=self.model,
-            messages=[
+        endpoint = f"{self.base_url.rstrip('/')}/api/chat"
+        payload = {
+            "model": self.model,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=temperature,
-        )
-        return completion.choices[0].message.content.strip()
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+        try:
+            response = requests.post(endpoint, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as exc:
+            raise AIUnavailable(f"Ollama request failed: {exc}") from exc
+
+        text = data.get("message", {}).get("content", "")
+        if not text:
+            raise AIUnavailable("Ollama returned an empty response.")
+        return text.strip()
+
+
+def build_ai_text_client() -> AITextClient:
+    """Build the configured local AI text client."""
+    if settings.AI_PROVIDER != "ollama":
+        raise AIUnavailable(f"Unsupported AI_PROVIDER: {settings.AI_PROVIDER}")
+    return AITextClient(
+        base_url=settings.OLLAMA_BASE_URL,
+        model=settings.OLLAMA_CHAT_MODEL,
+        timeout=settings.OLLAMA_TIMEOUT,
+    )
 
 
 def _ai_client() -> AITextClient:
     """Build the configured AI text client."""
-    return AITextClient(api_key=settings.OPENAI_API_KEY, model=settings.OPENAI_CHAT_MODEL)
+    return build_ai_text_client()
 
 
 def _contains_any(text: str, words: tuple[str, ...]) -> bool:
@@ -94,9 +95,9 @@ def rule_based_intent(text: str) -> str:
         return "None"
     if any(word in normalized for word in ["ai生圖", "產生圖", "生成圖片", "畫一張", "dall", "dalle"]):
         return "AI生圖"
-    if any(word in normalized for word in ["相簿", "照片", "圖片", "給我看", "找圖", "曾經看"]):
+    if any(word in normalized for word in ["相簿", "本機照片", "我的照片", "我的圖片", "相片庫", "曾經看"]):
         return "相簿取圖"
-    if any(word in normalized for word in ["查", "搜尋", "新聞", "網路", "資料", "即時", "報導"]):
+    if any(word in normalized for word in ["查", "搜尋", "新聞", "網路", "資料", "即時", "報導", "介紹", "是什麼", "找圖", "圖片", "照片", "給我看"]):
         return "爬蟲模式"
     if any(word in normalized for word in ["簡報", "投影片", "ppt", "下一頁", "口說簡報"]):
         return "簡報模式"
@@ -108,11 +109,13 @@ def rule_based_intent(text: str) -> str:
 def classify_intent(text: str) -> dict[str, str]:
     """Classify user speech into one of the supported modes."""
     fallback = rule_based_intent(text)
+    if fallback != "None":
+        return {"intent": fallback, "source": "rules"}
     try:
         ai_result = _ai_client().complete(INTENT_PROMPT, text, temperature=0)
         cleaned = ai_result.strip().splitlines()[0].strip(" `。")
         if cleaned in INTENT_VALUES:
-            return {"intent": cleaned, "source": "openai"}
+            return {"intent": cleaned, "source": "ollama"}
     except Exception:
         pass
     return {"intent": fallback, "source": "rules"}
@@ -149,7 +152,7 @@ def normalize_transcript_text(transcript) -> str:
 
 
 def fallback_summary(transcript) -> str:
-    """Create a deterministic summary when OpenAI is unavailable."""
+    """Create a deterministic summary when Ollama is unavailable."""
     transcript = normalize_transcript_text(transcript)
     compact = re.sub(r"\s+", " ", transcript).strip()
     if not compact:
@@ -166,7 +169,7 @@ def summarize_dialogue(transcript) -> dict[str, str]:
     transcript_text = normalize_transcript_text(transcript)
     try:
         text = _ai_client().complete(SUMMARY_PROMPT, transcript_text, temperature=0.1)
-        return {"summary": text, "source": "openai"}
+        return {"summary": text, "source": "ollama"}
     except Exception:
         return {"summary": fallback_summary(transcript_text), "source": "rules"}
 
@@ -275,9 +278,9 @@ def build_presentation_slide(text: str, current_slide: dict | None = None) -> di
         parsed = _extract_json_object(ai_text)
         if parsed == "None":
             slide = blank_slide()
-            return {"response": "None", "slide": slide, "source": "openai", "should_exit": True}
+            return {"response": "None", "slide": slide, "source": "ollama", "should_exit": True}
         slide = normalize_slide(parsed if isinstance(parsed, dict) else None)
-        source = "openai"
+        source = "ollama"
     except Exception:
         slide = fallback_slide(text, current)
         source = "rules"
@@ -299,6 +302,14 @@ def semantic_image_search(text: str) -> dict:
     return {"response": response, "images": images, "source": "local_catalog"}
 
 
+def _request_headers() -> dict[str, str]:
+    """Return headers accepted by lightweight search and preview pages."""
+    return {
+        "User-Agent": "Talk2Draw/1.0 (+local research assistant)",
+        "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.6",
+    }
+
+
 def search_web(query: str) -> dict:
     """Fetch lightweight web search results for the smart retrieval module."""
     if not query.strip():
@@ -314,7 +325,7 @@ def search_web(query: str) -> dict:
         response = requests.get(
             "https://duckduckgo.com/html/",
             params={"q": query},
-            headers={"User-Agent": "Talk2Draw/1.0"},
+            headers=_request_headers(),
             timeout=settings.TALK2DRAW_SEARCH_TIMEOUT,
         )
         response.raise_for_status()
@@ -336,7 +347,210 @@ def search_web(query: str) -> dict:
                 "snippet": snippet.get_text(" ", strip=True) if snippet else "",
             }
         )
-    return {"results": results, "source": "duckduckgo", "error": ""}
+    images = find_web_images(query, results=results, limit=4)
+    return {"results": results, "images": images, "source": "duckduckgo", "error": ""}
+
+
+def find_web_images(query: str, *, results: list[dict] | None = None, limit: int = 4) -> list[dict[str, str]]:
+    """Extract relevant preview images from top web results without using the local album."""
+    if not query.strip() or limit <= 0:
+        return []
+
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+
+    images = _search_bing_images(query, limit=limit)
+    if len(images) >= limit:
+        return images[:limit]
+
+    candidates = results
+    if candidates is None:
+        candidates = search_web(query).get("results", [])
+
+    seen_urls: set[str] = set()
+    for image in images:
+        seen_urls.add(image["url"])
+
+    page_timeout = min(settings.TALK2DRAW_SEARCH_TIMEOUT, 4)
+    for item in candidates[:6]:
+        page_url = str(item.get("url") or "")
+        if not page_url.startswith(("http://", "https://")):
+            continue
+        try:
+            response = requests.get(page_url, headers=_request_headers(), timeout=page_timeout)
+            response.raise_for_status()
+        except Exception:
+            continue
+
+        content_type = response.headers.get("content-type", "")
+        if "text/html" not in content_type and "application/xhtml" not in content_type:
+            continue
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        image_url = _extract_preview_image(soup, page_url)
+        if not image_url or image_url in seen_urls:
+            continue
+        title = str(item.get("title") or "")
+        if not _is_relevant_image_candidate(query, title, page_url):
+            continue
+        seen_urls.add(image_url)
+        images.append(
+            {
+                "url": image_url,
+                "title": title,
+                "source_url": page_url,
+                "source_title": str(item.get("title") or urlparse(page_url).netloc),
+            }
+        )
+        if len(images) >= limit:
+            break
+    return images
+
+
+def _search_bing_images(query: str, limit: int = 4) -> list[dict[str, str]]:
+    """Read Bing image search metadata and keep only text-relevant image hits."""
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+
+    try:
+        response = requests.get(
+            "https://www.bing.com/images/search",
+            params={"q": query, "form": "HDRSC2", "first": "1"},
+            headers=_request_headers(),
+            timeout=settings.TALK2DRAW_SEARCH_TIMEOUT,
+        )
+        response.raise_for_status()
+    except Exception:
+        return []
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    images: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+    for link in soup.select("a.iusc")[:20]:
+        metadata = link.get("m", "")
+        if not metadata:
+            continue
+        try:
+            data = json.loads(metadata)
+        except json.JSONDecodeError:
+            continue
+
+        title = str(data.get("t") or "")
+        source_url = str(data.get("purl") or "")
+        if not _is_relevant_image_candidate(query, title, source_url):
+            continue
+
+        image_url = _normalize_image_url(str(data.get("murl") or data.get("turl") or ""), source_url or response.url)
+        if not image_url or image_url in seen_urls:
+            continue
+        seen_urls.add(image_url)
+        images.append(
+            {
+                "url": image_url,
+                "title": title,
+                "source_url": source_url,
+                "source_title": title or urlparse(source_url).netloc,
+            }
+        )
+        if len(images) >= limit:
+            break
+    return images
+
+
+def _query_terms(query: str) -> list[str]:
+    """Extract useful matching terms while dropping generic assistant words."""
+    stop_words = {
+        "ai",
+        "圖片",
+        "照片",
+        "參考",
+        "生成",
+        "生成圖片",
+        "生圖",
+        "畫圖",
+        "幫我",
+        "我想看",
+        "給我看",
+        "查詢",
+        "搜尋",
+        "相關",
+    }
+    punctuation_pattern = r"[\s:\uFF1A\uFF0C,。.!！\uFF1F?「」『』()\uFF08\uFF09\[\]{}]+"
+    normalized = re.sub(punctuation_pattern, " ", query.lower())
+    chunks = []
+    for raw_chunk in normalized.split():
+        raw_chunk = raw_chunk.strip()
+        for prefix in ("請幫我查", "請幫我找", "幫我查", "幫我找", "請幫我", "我想看", "給我看", "幫我", "查詢", "搜尋", "找"):
+            if raw_chunk.startswith(prefix):
+                raw_chunk = raw_chunk[len(prefix) :]
+        for suffix in ("圖片", "照片", "圖像", "圖", "參考", "資料", "資訊"):
+            if raw_chunk.endswith(suffix):
+                raw_chunk = raw_chunk[: -len(suffix)]
+        parts = re.split(r"[的在與和及上]+", raw_chunk)
+        chunks.extend(part for part in parts if part)
+
+    terms: list[str] = []
+    for chunk in chunks:
+        cleaned = chunk.strip()
+        if len(cleaned) < 2 or cleaned in stop_words:
+            continue
+        if cleaned not in terms:
+            terms.append(cleaned)
+    return terms[:8]
+
+
+def _is_relevant_image_candidate(query: str, title: str, source_url: str = "") -> bool:
+    """Reject image hits that look like generic site logos or unrelated covers."""
+    terms = _query_terms(query)
+    if not terms:
+        return True
+    haystack = f"{title} {source_url}".lower()
+    return any(term in haystack for term in terms)
+
+
+def _extract_preview_image(soup, page_url: str) -> str:
+    """Pick the strongest image URL from a result page."""
+    meta_selectors = [
+        ('meta[property="og:image"]', "content"),
+        ('meta[property="og:image:secure_url"]', "content"),
+        ('meta[name="twitter:image"]', "content"),
+        ('meta[name="twitter:image:src"]', "content"),
+    ]
+    for selector, attr in meta_selectors:
+        node = soup.select_one(selector)
+        image_url = _normalize_image_url(node.get(attr, "") if node else "", page_url)
+        if image_url:
+            return image_url
+
+    for img in soup.find_all("img"):
+        raw_url = img.get("src") or img.get("data-src") or img.get("data-original")
+        image_url = _normalize_image_url(raw_url or "", page_url)
+        if image_url:
+            return image_url
+    return ""
+
+
+def _normalize_image_url(raw_url: str, page_url: str) -> str:
+    """Resolve and filter candidate image URLs."""
+    raw_url = raw_url.strip()
+    if not raw_url or raw_url.startswith(("data:", "blob:")):
+        return ""
+    image_url = urljoin(page_url, raw_url)
+    parsed = urlparse(image_url)
+    if parsed.scheme not in {"http", "https"}:
+        return ""
+    lowered = image_url.lower()
+    if any(token in lowered for token in ("favicon", "sprite", "blank", "pixel", "logo.svg")):
+        return ""
+    if lowered.endswith(".svg"):
+        return ""
+    return image_url
 
 
 def _clean_duckduckgo_url(url: str) -> str:
@@ -353,47 +567,18 @@ def _clean_duckduckgo_url(url: str) -> str:
 
 
 def generate_image(prompt: str) -> dict:
-    """Generate an image with OpenAI or return a useful local fallback."""
+    """Return web reference images for drawing prompts without using album fallbacks."""
     if not prompt.strip():
         return {"url": "", "source": "none", "message": "請先輸入要生成的圖片描述。"}
-    if not settings.OPENAI_API_KEY:
-        fallback = search_images(prompt, limit=1)
-        return {
-            "url": fallback[0]["url"] if fallback else "",
-            "source": "local_fallback",
-            "message": "尚未設定 OPENAI_API_KEY，已改用本機相簿最接近的圖片。",
-        }
-
-    try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        result = client.images.generate(
-            model=settings.OPENAI_IMAGE_MODEL,
-            prompt=prompt,
-            size=settings.OPENAI_IMAGE_SIZE,
-        )
-        first = result.data[0]
-        b64_json = getattr(first, "b64_json", None)
-        image_url = getattr(first, "url", None)
-        if b64_json:
-            generated_dir = settings.MEDIA_ROOT / "generated"
-            generated_dir.mkdir(parents=True, exist_ok=True)
-            filename = f"{uuid.uuid4().hex}.png"
-            output_path = generated_dir / filename
-            output_path.write_bytes(base64.b64decode(b64_json))
-            return {"url": f"{settings.MEDIA_URL}generated/{filename}", "source": "openai", "message": ""}
-        if image_url:
-            return {"url": image_url, "source": "openai", "message": ""}
-    except Exception as exc:
-        fallback = search_images(prompt, limit=1)
-        return {
-            "url": fallback[0]["url"] if fallback else "",
-            "source": "local_fallback",
-            "message": f"AI 生圖暫時失敗，已改用本機圖片。錯誤：{exc}",
-        }
-
-    return {"url": "", "source": "openai", "message": "AI 生圖沒有回傳圖片。"}
+    search_data = search_web(f"{prompt} 圖片 參考")
+    images = search_data.get("images", [])
+    return {
+        "url": images[0]["url"] if images else "",
+        "images": images,
+        "results": search_data.get("results", []),
+        "source": "web_reference",
+        "message": "Ollama 目前是地端文字模型；我不會再硬套本機相簿，已改用網路查詢到的相關圖片作為畫圖參考。",
+    }
 
 
 def _number_value(raw_number: str, unit: str) -> float:

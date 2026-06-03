@@ -8,7 +8,7 @@
 - 即時智慧檢索：偵測查詢語意後，抓取 DuckDuckGo 輕量搜尋結果並呈現標題、摘要與連結。
 - 對話彙整：將逐字稿整理為主題、大綱、重點整理與待辦事項，可下載文字檔。
 - 口說簡報：進入簡報模式後，每句話會更新投影片標題、小標題、重點與圖片。
-- AI 生圖：設定 `OPENAI_API_KEY` 後可呼叫 OpenAI 圖像模型；未設定時會改用本機相簿備援。
+- AI 圖片輔助：使用 Ollama 地端文字模型理解語意，圖片輸出改用本機相簿備援。
 - 圖表模式：可把「五月銷售額20萬，六月90萬」這類口說資料轉成長條圖。
 - Jarvis Agent：參考 OpenJarvis 的 webchat channel、工具路由、skill catalog 概念，整合成右側即時對話框。
 - Skill 匯入：可匯入安全的 `.md` / `.json` / `.toml` skill 描述檔，Jarvis 會加入 catalog 並依觸發詞套用。
@@ -17,11 +17,18 @@
 
 - Python 3.10 以上
 - Chrome 或 Edge 瀏覽器，語音辨識使用瀏覽器 Web Speech API
-- OpenAI API key，正式 AI 摘要、簡報與生圖需要填入 `.env`
+- Ollama，正式 AI 摘要、簡報與 Jarvis 回覆會呼叫地端模型
 
 ## Docker 快速啟動
 
-建議優先用 Docker Compose 啟動。先確認 `.env` 已存在並填好 `OPENAI_API_KEY`：
+建議優先用 Docker Compose 啟動。先確認 Ollama 已啟動並拉好模型：
+
+```bash
+ollama pull llama3.1:8b
+ollama serve
+```
+
+接著確認 `.env` 已存在並設定 `OLLAMA_CHAT_MODEL`：
 
 ```bash
 cd /Users/hown-macmini/Desktop/Talk2Draw
@@ -85,14 +92,14 @@ DJANGO_SESSION_COOKIE_SECURE=False
 DJANGO_CSRF_COOKIE_SECURE=False
 DJANGO_SECURE_HSTS_SECONDS=0
 SQLITE_DATABASE_PATH=db.sqlite3
-OPENAI_API_KEY=你的 OpenAI API Key
-OPENAI_CHAT_MODEL=gpt-4.1-mini
-OPENAI_IMAGE_MODEL=gpt-image-1
-OPENAI_IMAGE_SIZE=1024x1024
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_CHAT_MODEL=llama3.1:8b
+OLLAMA_TIMEOUT=60
 TALK2DRAW_SEARCH_TIMEOUT=8
 ```
 
-本機測試可以先不填 `OPENAI_API_KEY`，系統會使用規則式備援；正式使用請務必填入。Docker Compose 會讀取同一份 `.env`，但會覆蓋部分 Django 安全設定，讓本機 `http://127.0.0.1:8000/` 可直接使用。
+本機測試可以把 `AI_PROVIDER` 設成 `rules`，系統會使用規則式備援。Docker Compose 會讀取同一份 `.env`，但會覆蓋部分 Django 安全設定，也會把容器內的 `OLLAMA_BASE_URL` 指向 `http://host.docker.internal:11434`，讓 app 可以連到主機上的 Ollama。
 
 ## 使用方式
 
@@ -158,7 +165,7 @@ source .venv/bin/activate
 python manage.py test
 ```
 
-測試不需要 OpenAI key，會走規則式備援。
+測試不需要 Ollama，會走規則式備援。
 
 Docker 容器內測試：
 
@@ -172,7 +179,7 @@ docker compose run --rm app python manage.py test
 assistant/
   jarvis_agent.py    OpenJarvis-style agent、skill catalog、附件產出
   image_catalog.py   本機相簿圖片索引與語意搜尋
-  prompts.py         OpenAI 提示詞集中管理
+  prompts.py         Ollama 提示詞集中管理
   services.py        摘要、模式判斷、簡報、生圖、檢索、圖表邏輯
   views.py           Django JSON API 與頁面 view
 talk2draw_project/

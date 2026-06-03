@@ -1,4 +1,4 @@
-"""Centralized Chinese prompts used by the OpenAI-backed features."""
+"""Centralized Chinese prompts used by the Ollama-backed features."""
 
 INTENT_PROMPT = """你是「話中有畫」的模式判斷器。
 請只回覆以下其中一個字串，不要加任何解釋：

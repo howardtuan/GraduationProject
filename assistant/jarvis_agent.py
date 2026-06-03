@@ -17,8 +17,8 @@ import uuid
 from django.conf import settings
 
 from .services import (
-    AITextClient,
     blank_slide,
+    build_ai_text_client,
     build_presentation_slide,
     classify_intent,
     extract_chart_data,
@@ -259,19 +259,18 @@ def _needs_file(message: str) -> bool:
 
 
 def _jarvis_reply(message: str, tool_summary: str, skill: SkillManifest | None = None) -> str:
-    """Generate a short Jarvis-style reply with OpenAI or a deterministic fallback."""
+    """Generate a short Jarvis-style reply with Ollama or a deterministic fallback."""
     skill_note = f"\nActive skill: {skill.name} - {skill.description}" if skill else ""
-    if settings.OPENAI_API_KEY:
-        prompt = (
-            "你是 Talk2Draw 裡的 Jarvis-style agent。"
-            "用繁體中文，語氣俐落、可靠、稍微有科技感，但不要浮誇。"
-            "請說明你已完成什麼，下一步使用者可以怎麼看結果。"
-            f"{skill_note}\nTool result:\n{tool_summary}"
-        )
-        try:
-            return AITextClient(settings.OPENAI_API_KEY, settings.OPENAI_CHAT_MODEL).complete(prompt, message, temperature=0.3)
-        except Exception:
-            pass
+    prompt = (
+        "你是 Talk2Draw 裡的 Jarvis-style agent。"
+        "用繁體中文，語氣俐落、可靠、稍微有科技感，但不要浮誇。"
+        "請說明你已完成什麼，下一步使用者可以怎麼看結果。"
+        f"{skill_note}\nTool result:\n{tool_summary}"
+    )
+    try:
+        return build_ai_text_client().complete(prompt, message, temperature=0.3)
+    except Exception:
+        pass
     prefix = "收到，已為你處理。"
     if skill:
         prefix = f"收到，已套用 `{skill.name}` skill。"
@@ -304,23 +303,32 @@ def run_jarvis_agent(message: str, *, current_slide: dict | None = None, transcr
             "slide": current_slide or blank_slide(),
         }
 
-    intent = classify_intent(cleaned)["intent"]
+    summary_requested = any(word in cleaned for word in ("摘要", "大綱", "重點整理", "逐字稿", "會議紀錄"))
+    intent = "摘要模式" if summary_requested else classify_intent(cleaned)["intent"]
     if selected_skill and selected_skill.instructions:
         actions.append({"tool": f"skill:{selected_skill.name}", "status": "selected", "detail": selected_skill.description})
 
-    if intent == "爬蟲模式":
+    if summary_requested:
+        source_text = transcript or cleaned
+        result = summarize_dialogue(source_text)
+        actions.append({"tool": "meeting_summary", "status": result.get("source", "completed"), "detail": "summary generated"})
+        stage = {"type": "summary", "summary": result["summary"]}
+        if _needs_file(cleaned):
+            attachments.append(_write_artifact("talk2draw-summary.md", result["summary"]))
+        tool_summary = result["summary"]
+    elif intent == "爬蟲模式":
         result = search_web(cleaned)
-        actions.append({"tool": "smart_search", "status": "completed", "detail": f"{len(result.get('results', []))} results"})
+        detail = f"{len(result.get('results', []))} results · {len(result.get('images', []))} images"
+        actions.append({"tool": "smart_search", "status": "completed", "detail": detail})
         stage = {"type": "search", **result}
         top = result.get("results", [])[:3]
-        tool_summary = "已完成即時檢索。\n" + "\n".join(f"- {item['title']}" for item in top) if top else "即時檢索沒有找到穩定結果。"
+        tool_summary = "已完成即時檢索與相關圖片整理。\n" + "\n".join(f"- {item['title']}" for item in top) if top else "即時檢索沒有找到穩定結果。"
     elif intent == "AI生圖":
         result = generate_image(cleaned)
-        actions.append({"tool": "image_generation", "status": result.get("source", "completed"), "detail": result.get("message", "")})
+        detail = f"{len(result.get('images', []))} reference images"
+        actions.append({"tool": "image_reference", "status": result.get("source", "completed"), "detail": detail})
         stage = {"type": "generated_image", **result}
-        if result.get("url"):
-            attachments.append(JarvisAttachment(name="generated-image", url=result["url"], kind="image", mime_type="image/png"))
-        tool_summary = result.get("message") or "圖片已完成並放在主畫面。"
+        tool_summary = result.get("message") or "已改用網路相關圖片作為畫圖參考。"
     elif intent == "圖表模式":
         result = extract_chart_data(cleaned)
         actions.append({"tool": "chart_builder", "status": "completed", "detail": f"{len(result.get('labels', []))} points"})
@@ -337,7 +345,7 @@ def run_jarvis_agent(message: str, *, current_slide: dict | None = None, transcr
             markdown = f"# {slide.get('Title', '投影片')}\n\n" + "\n".join(f"- {item}" for item in slide.get("Content", []))
             attachments.append(_write_artifact("slide.md", markdown))
         tool_summary = "投影片已更新。"
-    elif "摘要" in cleaned or "大綱" in cleaned or "整理" in cleaned or _needs_file(cleaned):
+    elif "整理" in cleaned or _needs_file(cleaned):
         source_text = transcript or cleaned
         result = summarize_dialogue(source_text)
         actions.append({"tool": "meeting_summary", "status": result.get("source", "completed"), "detail": "summary generated"})
@@ -345,11 +353,18 @@ def run_jarvis_agent(message: str, *, current_slide: dict | None = None, transcr
         if _needs_file(cleaned):
             attachments.append(_write_artifact("talk2draw-summary.md", result["summary"]))
         tool_summary = result["summary"]
-    else:
+    elif intent == "相簿取圖":
         result = semantic_image_search(cleaned)
         actions.append({"tool": "visualize_speech", "status": "completed", "detail": f"{len(result.get('images', []))} images"})
         stage = {"type": "images", **result}
-        tool_summary = "我已根據語意挑出視覺素材。" if result.get("images") else "目前沒有找到合適的本機素材。"
+        tool_summary = "我已從本機相簿挑出視覺素材。" if result.get("images") else "目前沒有找到合適的本機相簿素材。"
+    else:
+        result = search_web(cleaned)
+        detail = f"{len(result.get('results', []))} results · {len(result.get('images', []))} images"
+        actions.append({"tool": "assistant_research", "status": "completed", "detail": detail})
+        stage = {"type": "search", **result}
+        top = result.get("results", [])[:3]
+        tool_summary = "我先用全方位助理模式整理網路資訊與相關圖片。\n" + "\n".join(f"- {item['title']}" for item in top) if top else "我沒有找到穩定的網路結果。"
 
     reply = _jarvis_reply(cleaned, tool_summary, selected_skill)
     return {

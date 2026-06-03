@@ -17,11 +17,18 @@ services:
       DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS: "False"
       DJANGO_SECURE_HSTS_PRELOAD: "False"
       SQLITE_DATABASE_PATH: "/app/data/db.sqlite3"
+      AI_PROVIDER: "ollama"
+      # Docker containers cannot reach the host Ollama daemon through localhost.
+      OLLAMA_BASE_URL: "http://host.docker.internal:11434"
+      OLLAMA_CHAT_MODEL: "${OLLAMA_CHAT_MODEL:-llama3.1:8b}"
+      OLLAMA_TIMEOUT: "${OLLAMA_TIMEOUT:-60}"
     ports:
       - "8000:8000"
     volumes:
       - talk2draw_data:/app/data
       - talk2draw_media:/app/media
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
       interval: 30s

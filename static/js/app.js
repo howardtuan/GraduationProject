@@ -6,12 +6,16 @@
     currentSlide: null,
     recognition: null,
     listening: false,
+    micEnabled: true,
+    autoStartAttempted: false,
+    skills: [],
   };
 
   const els = {
     statusText: document.querySelector("#statusText"),
     modePill: document.querySelector("#modePill"),
     stageContent: document.querySelector("#stageContent"),
+    micState: document.querySelector("#micState"),
     chatFeed: document.querySelector("#chatFeed"),
     jarvisInput: document.querySelector("#jarvisInput"),
     sendBtn: document.querySelector("#sendBtn"),
@@ -26,6 +30,7 @@
     skillInput: document.querySelector("#skillInput"),
     skillsList: document.querySelector("#skillsList"),
     skillCount: document.querySelector("#skillCount"),
+    showSkillsStageBtn: document.querySelector("#showSkillsStageBtn"),
   };
 
   const csrfToken = document.querySelector("meta[name='csrf-token']")?.content || "";
@@ -36,6 +41,14 @@
 
   function setMode(mode) {
     els.modePill.textContent = mode && mode !== "None" ? mode : "standby";
+  }
+
+  function setMicState(message, active = false) {
+    els.micState.textContent = message;
+    document.body.classList.toggle("mic-active", active);
+    const speechAvailable = Boolean(state.recognition);
+    els.voiceBtn.disabled = !speechAvailable || active;
+    els.stopVoiceBtn.disabled = !speechAvailable || (!active && !state.micEnabled);
   }
 
   function escapeHTML(value) {
@@ -118,15 +131,52 @@
   }
 
   function renderGeneratedImage(data) {
-    if (!data.url) {
-      renderEmpty("Image generation unavailable", data.message || "No image returned.");
+    const images = data.images || [];
+    if (!images.length) {
+      renderEmpty("No web reference images", data.message || "No image returned.");
       return;
     }
     els.stageContent.innerHTML = `
-      <figure class="generated-image">
-        <img src="${escapeHTML(data.url)}" alt="Jarvis generated image">
-        ${data.message ? `<figcaption>${escapeHTML(data.message)}</figcaption>` : ""}
-      </figure>
+      <section class="reference-stage">
+        <div class="stage-intro">
+          <strong>Web image references</strong>
+          <span>${escapeHTML(data.message || "已整理網路相關圖片作為視覺參考。")}</span>
+        </div>
+        ${webImageGridHTML(images)}
+        ${searchResultsHTML(data.results || [], "Related sources")}
+      </section>
+    `;
+  }
+
+  function webImageGridHTML(images = []) {
+    if (!images.length) return "";
+    return `
+      <div class="web-image-grid">
+        ${images.map((image) => `
+          <figure class="web-image-card">
+            <img src="${escapeHTML(image.url)}" alt="${escapeHTML(image.title || image.source_title || "web reference image")}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('figure').classList.add('is-broken')">
+            <figcaption>
+              <span>${escapeHTML(image.title || image.source_title || "Web image")}</span>
+              ${image.source_url ? `<a href="${escapeHTML(image.source_url)}" target="_blank" rel="noopener noreferrer">Source</a>` : ""}
+            </figcaption>
+          </figure>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function searchResultsHTML(results = [], title = "") {
+    if (!results.length) return "";
+    return `
+      <div class="search-results">
+        ${title ? `<h3>${escapeHTML(title)}</h3>` : ""}
+        ${results.map((item) => `
+          <a class="search-item" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">
+            <strong>${escapeHTML(item.title)}</strong>
+            <span>${escapeHTML(item.snippet || item.url)}</span>
+          </a>
+        `).join("")}
+      </div>
     `;
   }
 
@@ -152,19 +202,22 @@
 
   function renderSearchResults(data = {}) {
     const results = data.results || [];
+    const images = data.images || [];
     if (!results.length) {
       renderEmpty("No search results", data.error || "The retrieval channel returned no usable links.");
       return;
     }
     els.stageContent.innerHTML = `
-      <div class="search-results">
-        ${results.map((item) => `
-          <a class="search-item" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">
-            <strong>${escapeHTML(item.title)}</strong>
-            <span>${escapeHTML(item.snippet || item.url)}</span>
-          </a>
-        `).join("")}
-      </div>
+      <section class="search-layout">
+        ${images.length ? `
+          <div class="stage-intro">
+            <strong>Research visuals</strong>
+            <span>從最相關的網路來源抽出的圖片參考。</span>
+          </div>
+          ${webImageGridHTML(images)}
+        ` : ""}
+        ${searchResultsHTML(results, "Search results")}
+      </section>
     `;
   }
 
@@ -196,14 +249,36 @@
   function renderSkills(skills = []) {
     els.stageContent.innerHTML = `
       <div class="skills-stage">
-        ${skills.map((skill) => `
-          <div class="skill-card">
-            <strong>${escapeHTML(skill.name)}</strong>
-            <span>${escapeHTML(skill.description)}</span>
-          </div>
-        `).join("")}
+        ${skills.map((skill) => skillDetailsHTML(skill, "skill-card")).join("")}
       </div>
     `;
+  }
+
+  function skillDetailsHTML(skill, className = "skill-item") {
+    const triggers = skill.trigger_phrases || [];
+    const tags = skill.tags || [];
+    return `
+      <details class="${className}">
+        <summary>
+          <span>${escapeHTML(skill.name)}</span>
+          <small>${escapeHTML(skill.source || "local")}</small>
+        </summary>
+        <p>${escapeHTML(skill.description || "No description")}</p>
+        <dl>
+          <div><dt>Version</dt><dd>${escapeHTML(skill.version || "0.1.0")}</dd></div>
+          <div><dt>Triggers</dt><dd>${escapeHTML(triggers.length ? triggers.join("、") : "未設定")}</dd></div>
+          <div><dt>Tags</dt><dd>${escapeHTML(tags.length ? tags.join("、") : "未設定")}</dd></div>
+        </dl>
+      </details>
+    `;
+  }
+
+  function renderSkillsList(skills = []) {
+    if (!skills.length) {
+      els.skillsList.innerHTML = `<span class="skills-empty">No skills loaded</span>`;
+      return;
+    }
+    els.skillsList.innerHTML = skills.map((skill) => skillDetailsHTML(skill)).join("");
   }
 
   function renderSummary(summary = "") {
@@ -260,10 +335,12 @@
       const response = await fetch("/api/agent/skills");
       const data = await response.json();
       const skills = data.skills || [];
+      state.skills = skills;
       els.skillCount.textContent = `${skills.length} loaded`;
-      els.skillsList.innerHTML = skills.slice(0, 12).map((skill) => `<span>${escapeHTML(skill.name)}</span>`).join("");
+      renderSkillsList(skills);
     } catch (_error) {
       els.skillCount.textContent = "offline";
+      els.skillsList.innerHTML = `<span class="skills-empty">Skill catalog offline</span>`;
     }
   }
 
@@ -307,6 +384,8 @@
     if (!SpeechRecognition) {
       els.voiceBtn.disabled = true;
       els.stopVoiceBtn.disabled = true;
+      state.micEnabled = false;
+      setMicState("Mic unavailable", false);
       setStatus("Voice unavailable; text console ready");
       return;
     }
@@ -326,11 +405,46 @@
     };
     recognition.onend = () => {
       state.listening = false;
-      els.voiceBtn.disabled = false;
-      setStatus("Jarvis online");
+      if (state.micEnabled) {
+        setMicState("Mic restarting", false);
+        window.setTimeout(() => startListening(), 350);
+      } else {
+        setMicState("Mic off", false);
+        setStatus("Jarvis online");
+      }
     };
-    recognition.onerror = (event) => setStatus(`Voice error: ${event.error}`);
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        state.micEnabled = false;
+        setMicState("Mic permission needed", false);
+      }
+      setStatus(`Voice error: ${event.error}`);
+    };
     state.recognition = recognition;
+    setMicState("Mic ready", false);
+  }
+
+  function startListening() {
+    if (!state.recognition || state.listening) return;
+    state.micEnabled = true;
+    try {
+      state.recognition.start();
+      state.listening = true;
+      setMicState("Mic listening", true);
+      setStatus("Listening...");
+    } catch (_error) {
+      setMicState("Mic ready", false);
+    }
+  }
+
+  function stopListening() {
+    state.micEnabled = false;
+    if (state.recognition && state.listening) {
+      state.recognition.stop();
+    }
+    state.listening = false;
+    setMicState("Mic off", false);
+    setStatus("Jarvis online");
   }
 
   function downloadText(filename, text) {
@@ -364,14 +478,8 @@
       renderEmpty();
       setMode("standby");
     });
-    els.voiceBtn.addEventListener("click", () => {
-      if (!state.recognition || state.listening) return;
-      state.listening = true;
-      els.voiceBtn.disabled = true;
-      state.recognition.start();
-      setStatus("Listening...");
-    });
-    els.stopVoiceBtn.addEventListener("click", () => state.recognition?.stop());
+    els.voiceBtn.addEventListener("click", () => startListening());
+    els.stopVoiceBtn.addEventListener("click", () => stopListening());
     els.summaryBtn.addEventListener("click", async () => {
       const data = await postJSON("/get_dialogue_summary", { inputParam: state.transcript });
       els.summaryOutput.textContent = data.response;
@@ -391,6 +499,7 @@
         event.target.value = "";
       }
     });
+    els.showSkillsStageBtn.addEventListener("click", () => renderSkills(state.skills));
     document.querySelectorAll("[data-prompt]").forEach((button) => {
       button.addEventListener("click", () => sendToJarvis(button.dataset.prompt || ""));
     });
@@ -403,4 +512,8 @@
   bindEvents();
   loadSkills();
   setMode("standby");
+  window.setTimeout(() => {
+    state.autoStartAttempted = true;
+    startListening();
+  }, 450);
 })();

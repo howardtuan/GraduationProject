@@ -3,20 +3,35 @@
 import json
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 
-from .services import build_presentation_slide, classify_intent, extract_chart_data, semantic_image_search
+from .services import build_presentation_slide, classify_intent, extract_chart_data, generate_image, semantic_image_search
 
 
-@override_settings(OPENAI_API_KEY="")
+@override_settings(AI_PROVIDER="rules")
 class ServiceFallbackTests(TestCase):
     """Verify that core features work without external API credentials."""
 
     def test_rule_based_intent_detects_search(self):
         result = classify_intent("幫我查小琉球最新新聞")
         self.assertEqual(result["intent"], "爬蟲模式")
+
+    def test_general_photo_request_uses_web_search_not_album(self):
+        result = classify_intent("給我看小琉球海龜照片")
+        self.assertEqual(result["intent"], "爬蟲模式")
+
+    def test_explicit_album_request_still_uses_local_catalog(self):
+        result = classify_intent("請從相簿找我的花瓶岩照片")
+        self.assertEqual(result["intent"], "相簿取圖")
+
+    def test_image_generation_uses_web_reference_not_album_fallback(self):
+        with patch("assistant.services.search_web", return_value={"images": [], "results": []}):
+            result = generate_image("生成圖片：火星上的台灣夜市")
+        self.assertEqual(result["source"], "web_reference")
+        self.assertEqual(result["images"], [])
 
     def test_semantic_image_search_finds_album_asset(self):
         result = semantic_image_search("我想看花瓶岩")
@@ -34,7 +49,7 @@ class ServiceFallbackTests(TestCase):
         self.assertEqual(result["slide"]["Title"], "小琉球之旅")
 
 
-@override_settings(OPENAI_API_KEY="")
+@override_settings(AI_PROVIDER="rules")
 class ViewTests(TestCase):
     """Smoke-test the rendered page and Flask-compatible JSON endpoints."""
 
@@ -67,23 +82,34 @@ class JarvisAgentTests(TestCase):
 
     def setUp(self):
         self.tmp_media = tempfile.TemporaryDirectory()
-        self.settings_override = override_settings(OPENAI_API_KEY="", MEDIA_ROOT=Path(self.tmp_media.name))
+        self.settings_override = override_settings(AI_PROVIDER="rules", MEDIA_ROOT=Path(self.tmp_media.name))
         self.settings_override.enable()
 
     def tearDown(self):
         self.settings_override.disable()
         self.tmp_media.cleanup()
 
-    def test_jarvis_chat_routes_visual_tool(self):
+    def test_jarvis_chat_routes_album_tool_only_when_explicit(self):
         response = self.client.post(
             "/api/agent/chat",
-            data=json.dumps({"message": "我想看花瓶岩"}),
+            data=json.dumps({"message": "請從相簿找花瓶岩"}),
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["stage"]["type"], "images")
         self.assertTrue(payload["actions"])
+
+    def test_jarvis_general_visual_request_routes_to_search(self):
+        with patch("assistant.jarvis_agent.search_web", return_value={"results": [], "images": [], "source": "duckduckgo", "error": ""}):
+            response = self.client.post(
+                "/api/agent/chat",
+                data=json.dumps({"message": "我想看花瓶岩照片"}),
+                content_type="application/json",
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["stage"]["type"], "search")
 
     def test_jarvis_can_return_downloadable_summary_file(self):
         response = self.client.post(
